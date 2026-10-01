@@ -1,6 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
 ########################################################################
 ## REFERENCE-BASED GENOME ASSEMBLY
 ########################################################################
+
+# How to use: bash Flu_assembler.sh data/03_tmp/b49.fastq.gz
 
 # Make result directories
 mkdir -p result/fastq
@@ -10,15 +15,16 @@ mkdir -p result/bam
 mkdir -p result/consensus
 
 # Summary statistics of raw fastq (data/03_tmp/b49.fastq.gz)
-seqkit stat $1 > result/stat/summary_statistcs.tsv
+# seqkit stat "filepath" > result/stat/summary_statistcs.tsv
+seqkit stat "$1" > result/stat/summary_statistcs.tsv
 
 #Select file based on pattern
-seqkit locate -p AGTAGAAACAAGG $1 | gzip -9 > result/tmp/reverse.tsv.gz
-seqkit locate -p AGCAAAAGCAGG  $1 | gzip -9 > result/tmp/forward.tsv.gz
+seqkit locate -p AGTAGAAACAAGG "$1" | gzip -9 > result/tmp/reverse.tsv.gz
+seqkit locate -p AGCAAAAGCAGG  "$1" | gzip -9 > result/tmp/forward.tsv.gz
 
 # Select the read id with correct orientation
-Rscript ./R/parse_primer_pattern.R result/tmp both
-seqkit grep -f result/tmp/QC_id.tsv $1 | gzip -9 > result/fastq/filtered.fq.gz
+Rscript ./scripts/parse_primer_pattern.R result/tmp both
+seqkit grep -f result/tmp/QC_id.tsv "$1" | gzip -9 > result/fastq/filtered.fq.gz
 seqkit stat result/fastq/filtered.fq.gz | tail -n+2 >> result/stat/summary_statistcs.tsv
 rm -rf result/fastq/*.tsv.gz
 
@@ -26,13 +32,16 @@ rm -rf result/fastq/*.tsv.gz
 seqkit seq -m 500 -Q 10 result/fastq/filtered.fq.gz |\
   seqkit subseq -r 50:-50 | gzip -9 > result/fastq/filtered_02.fq.gz
 seqkit stat result/fastq/filtered_02.fq.gz | tail -n+2 >> result/stat/summary_statistcs.tsv
+
+# Separated out the database as a variable
+DB="db/sequences_DNA.fasta"
   
 # Run makeblastdb just for single time to make database for blastn 
-makeblastdb -in db/sequences_DNA.fasta -dbtype nucl
+makeblastdb -in "$DB" -dbtype nucl
 
 # This will give you reads mapped on influenza virus sequence
-seqkit fq2fa result/fastq/filtered_02.fq.gz |\
-  blastn -query - -db db/sequences_DNA.fasta -outfmt '6 qseqid sseqid pident length qlen' > result/tmp/blast_hits.tsv
+seqkit fq2fa result/fastq/filtered_02.fq.gz | \
+  blastn -query - -db "$DB" -outfmt '6 qseqid sseqid pident length qlen' > result/tmp/blast_hits.tsv
 
 # Get only read with 80 percent similarity mapping
 cat result/tmp/blast_hits.tsv | awk '{prop=100*($4/$5);print $0 "\t" prop}'| awk '$3 >= 80 && $6 >= 80' > result/tmp/blast_hits_filtered.tsv
@@ -52,7 +61,7 @@ do
   
    # Get the name of best reference of k segment
    name=$(cat db/sequences_DNA.fasta | grep ">" |\
-            grep "segment $k" | awk '{print $1}' |\
+            grep "segment $k" | awk '{print "filepath"}' |\
               sed 's/>//g' | grep -f - result/tmp/blast_hits_filtered.tsv |\
                 cut -f2 | sort | uniq -c | sort -k1,1nr | awk 'NR==1{print $2}')
 

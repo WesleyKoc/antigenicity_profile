@@ -7,6 +7,7 @@ library(DT)
 library(r3dmol)
 library(bio3d)
 library(Biostrings)
+library(bslib)
 data(BLOSUM100)
 source("R/config.R")
 source("R/utils.R")
@@ -24,7 +25,9 @@ ui <- fluidPage(
                          column(
                            width = 7,
                            hr(),
-                           div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", textOutput("demo_report")),
+                           div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; 
+                               background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", 
+                               textOutput("demo_report")),
                            div(
                              style = "width: 100%; margin: 0 auto;",
                              plotlyOutput("plot_antigencity", height = "500px"),
@@ -35,6 +38,12 @@ ui <- fluidPage(
                            #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
                            r3dmolOutput("mol", height = "300px"),
                            hr(),
+                           selectInput(inputId = "protein_file",
+                                       label = "Choose Protein Model to Visualise Mutations On:",
+                                       list("2009 H1N1 influenza virus hemagglutinin" = "3LZG",
+                                            "A/Hong Kong/1/1968 (H3N2) influenza virus hemagglutinin" = "6CEX",
+                                            "H5N1 influenza virus hemagglutinin" = "2FK0"),
+                                       width = 999),
                            plotlyOutput("plot_epitope", height = "300px", width = "100%"),
                          )
                        ),
@@ -123,10 +132,20 @@ server <- function(input, output) {
   
   ## execute code
   result_ready <- reactiveVal(FALSE)
-  observeEvent(input$run_pipeline,{
-    system2("bash", args = c("script/01_run.sh",input$fastq_files$datapath))
+  observeEvent(input$run_pipeline, {
+    req(input$radio == "1")
+    req(!is.null(input$fastq_files))
+    input_path <- input$fastq_files$datapath
+    req(length(input_path) == 1, !is.na(input_path), nzchar(input_path))
+    req(file.exists(input_path))
+    message("Shiny is launching pipeline with: ", input_path)
+    status <- system2("conda",args = c("run", "--no-capture-output", "-n", "antigenicity_profile","bash", "Flu_assembler.sh", shQuote(input_path)))
+    if (status != 0) {
+      showNotification("Assembly pipeline failed; inspect the R console.", type = "error")
+      return()
+    }
     result_ready(TRUE)
-  })
+  }, ignoreInit = TRUE)
 
   
 
@@ -411,7 +430,8 @@ server <- function(input, output) {
     
     
     # Read your legacy-format PDB file
-    pdb <- read.pdb("data/03_tmp/3LZG.pdb")
+    pdb_file <- file.path("data/03_tmp/",paste0(input$protein_file,".pdb"))
+    pdb <- bio3d::read.pdb(pdb_file)
     pdb_trim <- trim.pdb(pdb, chain = c("A","B","C","D","E","F"))
     pdb_text <- paste(capture.output(write.pdb(pdb_trim)), collapse = "\n")  
     
@@ -546,7 +566,7 @@ server <- function(input, output) {
           date_labels = "%Y-%m"
         )+
         labs(color="",shape="")+
-        ylab("Vaccine efficacy ((u - v)/v)")+
+        ylab("Vaccine efficacy ((u - v)/u)")+
         xlab("Date (Year-month)")+
         theme_minimal()+
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
@@ -601,7 +621,8 @@ server <- function(input, output) {
     epitope <- clicked_epitope()
   
     # Read your legacy-format PDB file
-    pdb <- read.pdb("data/03_tmp/3LZG.pdb")
+    pdb_file <- file.path("data/03_tmp/",paste0(input$protein_file,".pdb"))
+    pdb <- bio3d::read.pdb(pdb_file)
     pdb_trim <- trim.pdb(pdb, chain = c("A","B","C","D","E","F"))
     pdb_text <- paste(capture.output(write.pdb(pdb_trim)), collapse = "\n")  
   
