@@ -21,20 +21,6 @@ ui <- fluidPage(
   # Main panel content first
   tabsetPanel(type = "tabs",
               tabPanel("Demo",
-                       layout_sidebar(
-                         sidebar = sidebar(
-                           position = "left",
-                           open = "closed",
-                           nav_menu(
-                             "Jump to (Demo)",
-                             nav_item("Demo report", href = "#demo_report_section"),
-                             nav_item("Antigenicity plot", href = "#antigencity_demo_section"),
-                             nav_item("3D molecule", href = "#demo_protein_model_section"),
-                             nav_item("Epitope plot", href = "#epitope_demo_section"),
-                             nav_item("Summary table", href = "#segment_summary_section")
-                           )
-                         )
-                       ),
                        fluidRow(
                          column(
                            width = 12,
