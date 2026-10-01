@@ -21,38 +21,69 @@ ui <- fluidPage(
   # Main panel content first
   tabsetPanel(type = "tabs",
               tabPanel("Demo",
-                       fluidRow(
-                         column(
-                           width = 7,
-                           hr(),
-                           div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; 
-                               background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", 
-                               textOutput("demo_report")),
-                           div(
-                             style = "width: 100%; margin: 0 auto;",
-                             plotlyOutput("plot_antigencity", height = "500px"),
-                           ),
-                         ),
-                         column(
-                           width = 5,
-                           #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
-                           r3dmolOutput("mol", height = "300px"),
-                           hr(),
-                           selectInput(inputId = "protein_file",
-                                       label = "Choose Protein Model to Visualise Mutations On:",
-                                       list("2009 H1N1 influenza virus hemagglutinin" = "3LZG",
-                                            "A/Hong Kong/1/1968 (H3N2) influenza virus hemagglutinin" = "6CEX",
-                                            "H5N1 influenza virus hemagglutinin" = "2FK0"),
-                                       width = 999),
-                           plotlyOutput("plot_epitope", height = "300px", width = "100%"),
+                       layout_sidebar(
+                         sidebar = sidebar(
+                           position = "left",
+                           open = "closed",
+                           nav_menu(
+                             "Jump to (Demo)",
+                             nav_item("Demo report", href = "#demo_report_section"),
+                             nav_item("Antigenicity plot", href = "#antigencity_demo_section"),
+                             nav_item("3D molecule", href = "#demo_protein_model_section"),
+                             nav_item("Epitope plot", href = "#epitope_demo_section"),
+                             nav_item("Summary table", href = "#segment_summary_section")
+                           )
                          )
                        ),
                        fluidRow(
                          column(
                            width = 12,
-                           dataTableOutput("segment_summary")
-                         )
-                       )),
+                           div(id="demo_report_section",
+                             hr(),
+                             div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; 
+                               background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", 
+                                 textOutput("demo_report")),
+                             )
+                           )
+                         ),
+                       
+                       fluidRow(
+                         column(
+                           width = 12,
+                           div(id="antigenicity_demo_section",
+                               hr(),
+                               div(
+                                 style = "width: 100%; margin: 0 auto;",
+                                 plotlyOutput("plot_antigencity", height = "500px")
+                                 )
+                               )
+                           )
+                       ),
+                       
+                        fluidRow(
+                         column(
+                            width = 10,
+                            offset=1,
+                            div(id="demo_protein_model_section",
+                                #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
+                                selectInput(inputId = "protein_file",
+                                            label = "Choose Protein Model to Visualise Mutations On:",
+                                            list("2009 H1N1 influenza virus hemagglutinin" = "3LZG",
+                                                 "A/Hong Kong/1/1968 (H3N2) influenza virus hemagglutinin" = "6CEX",
+                                                 "H5N1 influenza virus hemagglutinin" = "2FK0"),
+                                            width = 999),
+                                r3dmolOutput("mol", height = "500px"),
+                                hr(),
+                                 plotlyOutput("plot_epitope", height = "300px", width = "100%")
+                                )
+                            )
+                          ),
+                         fluidRow(
+                           column(
+                             width = 12,
+                             dataTableOutput("segment_summary")
+                           )
+                         )),
               tabPanel("User's analysis",
                        br(),
                        fluidRow(
@@ -123,8 +154,7 @@ ui <- fluidPage(
                            width = 12,
                            dataTableOutput("segment_summary_usr")
                          )
-                       )))
-)
+                       ))))
 
 # Define server logic ----
 server <- function(input, output) {
