@@ -149,17 +149,38 @@ server <- function(input, output) {
   ## execute code
   result_ready <- reactiveVal(FALSE)
   observeEvent(input$run_pipeline, {
-    req(input$radio == "1")
+    if (input$radio == "1") {
     req(!is.null(input$fastq_files))
     input_path <- input$fastq_files$datapath
     req(length(input_path) == 1, !is.na(input_path), nzchar(input_path))
     req(file.exists(input_path))
-    message("Shiny is launching pipeline with: ", input_path)
+    message("Shiny is launching assembly + antigenicity pipeline with: ", input_path)
     status <- system2("conda",args = c("run", "--no-capture-output", "-n", "antigenicity_profile","bash", "Flu_assembler.sh", shQuote(input_path)))
     if (status != 0) {
       showNotification("Assembly pipeline failed; inspect the R console.", type = "error")
       return()
     }
+    }
+    
+    else if (input$radio == "2") {
+      req(!is.null(input$fasta_files))
+      input_path <- input$fasta_files$datapath
+      req(length(input_path) == 1, !is.na(input_path), nzchar(input_path))
+      req(file.exists(input_path))
+      message("Shiny is launching antigenicity pipeline with: ", input_path)
+      dir.create("result/consensus", recursive = TRUE, showWarnings = FALSE)
+      file.copy (
+        from = input_path,
+        to = "result/consensus/draft_seg_4.fasta",
+        overwrite =TRUE
+      )
+      #status <- system2("conda",args = c("run", "--no-capture-output", "-n", "antigenicity_profile","bash", "Flu_assembler.sh", shQuote(input_path)))
+      #if (status != 0) {
+      # showNotification("Assembly pipeline failed; inspect the R console.", type = "error")
+      #  return()
+      #}
+    }
+    
     result_ready(TRUE)
   }, ignoreInit = TRUE)
 
@@ -267,7 +288,7 @@ server <- function(input, output) {
         }  else if(type == "H3N2"){
           E <- -2.47*Pepitope+0.47
           
-        } else if(Z == "VIC"){
+        } else if(type == "VIC"){
           E <- -0.86*Pepitope+0.68
           
         }
