@@ -127,10 +127,19 @@ ui <- fluidPage(
                              style = "width: 100%; margin: 0 auto;",
                              plotlyOutput("plot_antigencity_user", height = "500px"),
                            ),
-                         ),
+                         )
+                       ),
+                       fluidRow(
                          column(
                            width = 10,
+                           offset = 1,
                            #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
+                           selectInput(inputId = "protein_file",
+                                       label = "Choose Protein Model to Visualise Mutations On:",
+                                       list("2009 H1N1 influenza virus hemagglutinin" = "3LZG",
+                                            "A/Hong Kong/1/1968 (H3N2) influenza virus hemagglutinin" = "6CEX",
+                                            "H5N1 influenza virus hemagglutinin" = "2FK0"),
+                                       width = 999),
                            r3dmolOutput("mol_user", height = "500px"),
                            hr(),
                            plotlyOutput("plot_epitope_user", height = "500px", width = "100%"),
