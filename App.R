@@ -120,7 +120,7 @@ ui <- fluidPage(
                        hr(),
                        fluidRow(
                          column(
-                           width = 7,
+                           width = 12,
                            hr(),
                            div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", textOutput("demo_report_user")),
                            div(
@@ -129,11 +129,11 @@ ui <- fluidPage(
                            ),
                          ),
                          column(
-                           width = 5,
+                           width = 10,
                            #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
-                           r3dmolOutput("mol_user", height = "300px"),
+                           r3dmolOutput("mol_user", height = "500px"),
                            hr(),
-                           plotlyOutput("plot_epitope_user", height = "300px", width = "100%"),
+                           plotlyOutput("plot_epitope_user", height = "500px", width = "100%"),
                          )
                        ),
                        fluidRow(
@@ -175,13 +175,29 @@ server <- function(input, output) {
       dir.create("result/consensus", recursive = TRUE, showWarnings = FALSE)
       ok <- file.copy (
         from = input_path,
-        to = "result/consensus/draft_seg_4.fasta",
+        to = "result/consensus/draft_segment_4.fasta",
         overwrite =TRUE
       )
       
       if (!ok) {
         showNotification("Sorry, FASTA file copy failed, please check ur server logs", type = "error")
         return()
+      }
+      
+      stats_dir <- file.path(getwd(), "result", "stat")
+      dir.create(stats_dir, recursive = TRUE, showWarnings = FALSE)
+      stats_file <- file.path(stats_dir, "summary_statistics.tsv")
+      
+      if (!file.exists(stats_file)) {
+        dummy_file <- data.frame(
+          `genomic segment` = paste0("Segment_", 1:8),
+          `Consensus Length` = NA_integer_,
+          `Read count` = NA_integer_,
+          `Averaged genomic depth` = NA_integer_,
+          `N number` = NA_integer_,
+          check.names = FALSE
+        )
+        fwrite(dummy_file, stats_file, sep = "\t")
       }
       
       message("Copied to: ", normalizePath("result/consensus/draft_segment_4.fasta"))
@@ -233,6 +249,7 @@ server <- function(input, output) {
     
     file <- "result/consensus/draft_segment_4.fasta"
     req(file.exists(file))
+    dir.create("result/tmp", recursive = TRUE, showWarnings = FALSE)
     
     type <- subtype()
     
@@ -247,10 +264,26 @@ server <- function(input, output) {
     cir_strain <- readAAStringSet(paste0("data/04_circulating_strain/",type,".fasta"))
     cir_strain <- cir_strain[sample(length(cir_strain), 100)]
     
-    writeXStringSet(c(sample_AA,vaccine_strain,cir_strain), "result/tmp/temp_seqs.fasta")
+    temp_in <- "result/tmp/temp_seqs.fasta"
+    temp_out <- "result/tmp/aligned.fasta"
     
-    # Run MUSCLE from R
-    system("muscle -in result/tmp/temp_seqs.fasta -out result/tmp/aligned.fasta")
+    writeXStringSet(c(sample_AA,vaccine_strain,cir_strain), temp_in)
+    
+    muscle_status <- system2(
+      "conda",
+      args = c(
+        "run", "--no-capture-output", "-n", "antigenicity_profile",
+        "muscle", "-align", temp_in, "-output", temp_out
+      ),
+      stdout = TRUE,
+      stderr = TRUE
+    )
+    message("MUSCLE status: ", attr(muscle_status, "status"))
+    message("MUSCLE output:\n", paste(muscle_status, collapse = "\n"))
+    
+    if (!file.exists(temp_out)) {
+      stop("MUSCLE did not produce aligned.fasta, check logs above.")
+    }
     
     aln <- readAAStringSet("result/tmp/aligned.fasta") |> 
       as.matrix() |> 
@@ -526,7 +559,7 @@ server <- function(input, output) {
   ## sunnary statistics
   output$segment_summary_usr <- renderDataTable({
     req(result_ready()) 
-    mydf <- fread("result/stat/summary_statistcs.tsv",header=T)
+    mydf <- fread("result/stat/summary_statistics.tsv",header=T)
     datatable(mydf,
               extensions = 'Buttons',
               options = list(
