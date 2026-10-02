@@ -7,6 +7,7 @@ library(DT)
 library(r3dmol)
 library(bio3d)
 library(Biostrings)
+library(pwalign)
 library(bslib)
 data(BLOSUM100)
 source("R/config.R")
@@ -149,6 +150,8 @@ server <- function(input, output) {
   ## execute code
   result_ready <- reactiveVal(FALSE)
   observeEvent(input$run_pipeline, {
+    
+    #Assembly+antigenicity
     if (input$radio == "1") {
     req(!is.null(input$fastq_files))
     input_path <- input$fastq_files$datapath
@@ -162,6 +165,7 @@ server <- function(input, output) {
     }
     }
     
+    #Antigenicity only
     else if (input$radio == "2") {
       req(!is.null(input$fasta_files))
       input_path <- input$fasta_files$datapath
@@ -169,11 +173,19 @@ server <- function(input, output) {
       req(file.exists(input_path))
       message("Shiny is launching antigenicity pipeline with: ", input_path)
       dir.create("result/consensus", recursive = TRUE, showWarnings = FALSE)
-      file.copy (
+      ok <- file.copy (
         from = input_path,
         to = "result/consensus/draft_seg_4.fasta",
         overwrite =TRUE
       )
+      
+      if (!ok) {
+        showNotification("Sorry, FASTA file copy failed, please check ur server logs", type = "error")
+        return()
+      }
+      
+      message("Copied to: ", normalizePath("result/consensus/draft_segment_4.fasta"))
+      message("File exists? ", file.exists("result/consensus/draft_segment_4.fasta"))
       #status <- system2("conda",args = c("run", "--no-capture-output", "-n", "antigenicity_profile","bash", "Flu_assembler.sh", shQuote(input_path)))
       #if (status != 0) {
       # showNotification("Assembly pipeline failed; inspect the R console.", type = "error")
@@ -189,13 +201,16 @@ server <- function(input, output) {
   ## check subtypes ##
   subtype <- reactive({
     
+    file <- "result/consensus/draft_segment_4.fasta"
+    req(file.exists(file))
+    
     HA_seg <- readDNAStringSet("result/consensus/draft_segment_4.fasta") |> translate_AA()
     nr <- readAAStringSet("data/01_numbering_reference_strain/amino_acid.fasta")
     seqs <- c(HA_seg,nr)
     
     score_vec <- c()
     for (u in c(2:4)) {
-      alm <- pairwiseAlignment(seqs[[1]], seqs[[u]], substitutionMatrix=BLOSUM100) |> score()  
+      alm <- pwalign::pairwiseAlignment(seqs[[1]], seqs[[u]], substitutionMatrix=BLOSUM100) |> score()  
       score_vec <- c(score_vec,alm)
     }
     
@@ -215,6 +230,9 @@ server <- function(input, output) {
   ## prediction ##
   
   pred <- reactive({
+    
+    file <- "result/consensus/draft_segment_4.fasta"
+    req(file.exists(file))
     
     type <- subtype()
     
