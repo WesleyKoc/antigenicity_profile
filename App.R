@@ -2,6 +2,7 @@ library(ggplot2)
 library(data.table)
 library(shiny)
 library(plotly)
+library(cli)
 library(shinycssloaders)
 library(DT)
 library(r3dmol)
@@ -17,7 +18,7 @@ options(shiny.maxRequestSize = 1024 * 1024 * 2048) # 2 GB
 
 # Define UI ----
 ui <- fluidPage(
-  theme = bs_theme(version = 5, bootswatch = "minty"),
+  theme = bs_theme(version = 5, bootswatch = "morph"),
   
   titlePanel(
     div(
@@ -41,7 +42,8 @@ ui <- fluidPage(
                          }"
                        )),
                        br(),
-                       fluidRow(tags$a(href="https://www.youtube.com/watch?v=9XDaVNsC_4g", "Click here for a youtube demo of the app!")),
+                       fluidRow(tags$p("Welcome to FluWatch! A tool for testing if your influenza virus strain works with current vaccine strains in circulation!"),
+                         tags$a(href="https://www.youtube.com/watch?v=9XDaVNsC_4g", "Click here for a youtube demo of the app!")),
                        fluidRow(
                          column(
                            width = 12,
@@ -106,6 +108,7 @@ ui <- fluidPage(
                        fluidRow(
                          column(
                            width = 5,
+                           br(),
                            radioButtons( 
                              inputId = "radio", 
                              label = "Analysis Type", 
@@ -147,11 +150,11 @@ ui <- fluidPage(
                            actionButton("run_pipeline", "Start", class = "btn-primary")
                          )
                        ),
-                       br(),
                        fluidRow(
                          column(
                            width = 12,
                            div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", textOutput("demo_report_user")),
+                           br(),
                            div(
                              style = "width: 100%; margin: 0 auto;",
                              plotlyOutput("plot_antigencity_user", height = "500px"),
@@ -176,7 +179,23 @@ ui <- fluidPage(
                            width = 12,
                            dataTableOutput("segment_summary_usr")
                          )
-                       ))))
+                       )
+                       ),
+              tabPanel("Help",
+                       tags$style(HTML(
+                         "body {
+                           margin-right: 150px;
+                           margin-left: 150px;
+                         }
+                         .radio label {
+                         white-space: nowrap;
+                         }"
+                       )),
+                       br(),
+                       fluidRow(tags$p("TBD"))
+                       )
+              )
+  )
 
 # Define server logic ----
 server <- function(input, output) {
@@ -459,7 +478,6 @@ server <- function(input, output) {
     demo_df$group <- ifelse(demo_df$type == "sample|unassigned","samples","Circulating strains")
     
     E <- round(unique(0.53-demo_df[demo_df$type == clicked_strain_user(),2]),3)*100
-    
     paste0("Vaccine efficacy of ",clicked_strain_user(),"\n",
            "compared with A/Victoria/2570/2019 strain is reduced by ",E," percent")
   })
