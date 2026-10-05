@@ -17,28 +17,47 @@ options(shiny.maxRequestSize = 1024 * 1024 * 2048) # 2 GB
 
 # Define UI ----
 ui <- fluidPage(
-  titlePanel("FluWatch ☢️ \n @TropMed"),
+  theme = bs_theme(version = 5, bootswatch = "minty"),
+  
+  titlePanel(
+    div(
+      p("FluWatch ☢️ \n", tags$em('@TropMed')),
+      tags$style(HTML(
+        "body{margin-top: 50px;}"
+      )),
+      style = "min-height: 120px; display: flex; justify-content: center;
+      align-items: center; width: 100%; font-family: 'Times New Roman'; font-size: 3.5vw"
+        )
+    ),
   
   # Main panel content first
   tabsetPanel(type = "tabs",
               tabPanel("Demo",
+                       tags$style(HTML(
+                         "body {
+                           margin-right: 150px;
+                           margin-left: 150px;
+                           margin-bottom: 150px;
+                         }"
+                       )),
+                       br(),
+                       fluidRow(tags$a(href="https://www.youtube.com/watch?v=9XDaVNsC_4g", "Click here for a youtube demo of the app!")),
                        fluidRow(
                          column(
                            width = 12,
+                           br(),
                            div(id="demo_report_section",
-                             hr(),
                              div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; 
                                background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", 
                                  textOutput("demo_report")),
                              )
                            )
                          ),
-                       
+                       br(),
                        fluidRow(
                          column(
                            width = 12,
                            div(id="antigenicity_demo_section",
-                               hr(),
                                div(
                                  style = "width: 100%; margin: 0 auto;",
                                  plotlyOutput("plot_antigencity", height = "500px")
@@ -46,36 +65,47 @@ ui <- fluidPage(
                                )
                            )
                        ),
-                       
-                        fluidRow(
+                       hr(),
+                       fluidRow(
                          column(
-                            width = 10,
-                            offset=1,
-                            div(id="demo_protein_model_section",
-                                #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
-                                selectInput(inputId = "protein_file",
-                                            label = "Choose Protein Model to Visualise Mutations On:",
-                                            list("2009 H1N1 influenza virus hemagglutinin" = "3LZG",
-                                                 "A/Hong Kong/1/1968 (H3N2) influenza virus hemagglutinin" = "6CEX",
-                                                 "H5N1 influenza virus hemagglutinin" = "2FK0"),
-                                            width = 999),
-                                r3dmolOutput("mol", height = "500px"),
-                                hr(),
-                                 plotlyOutput("plot_epitope", height = "300px", width = "100%")
-                                )
-                            )
-                          ),
-                         fluidRow(
-                           column(
-                             width = 12,
-                             dataTableOutput("segment_summary")
+                           width = 10,
+                           offset=1,
+                           div(id="demo_protein_model_section",
+                               #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
+                               selectInput(inputId = "protein_file",
+                                           label = "Choose Protein Model to Visualise Mutations On:",
+                                           list("2009 H1N1 influenza virus hemagglutinin" = "3LZG",
+                                                "A/Hong Kong/1/1968 (H3N2) influenza virus hemagglutinin" = "6CEX",
+                                                "H5N1 influenza virus hemagglutinin" = "2FK0"),
+                                           width = 999),
+                               r3dmolOutput("mol", height = "500px"),
+                               br(),
+                               plotlyOutput("plot_epitope", height = "300px", width = "100%")
+                               )
                            )
-                         )),
+                         ),
+                      hr(),
+                      br(),
+                      fluidRow(
+                        column(
+                          width = 12,
+                          dataTableOutput("segment_summary")
+                          )
+                        )),
               tabPanel("User's analysis",
+                       tags$style(HTML(
+                         "body {
+                           margin-right: 150px;
+                           margin-left: 150px;
+                         }
+                         .radio label {
+                         white-space: nowrap;
+                         }"
+                       )),
                        br(),
                        fluidRow(
                          column(
-                           width = 3,
+                           width = 5,
                            radioButtons( 
                              inputId = "radio", 
                              label = "Analysis Type", 
@@ -112,16 +142,15 @@ ui <- fluidPage(
                            dateInput("date1", "Collected Date:", value = "2020-02-10")
                          ),
                          column(
-                           width = 2,
+                           width = 1,
                            br(), # adds spacing before button
                            actionButton("run_pipeline", "Start", class = "btn-primary")
                          )
                        ),
-                       hr(),
+                       br(),
                        fluidRow(
                          column(
                            width = 12,
-                           hr(),
                            div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", textOutput("demo_report_user")),
                            div(
                              style = "width: 100%; margin: 0 auto;",
@@ -129,24 +158,21 @@ ui <- fluidPage(
                            ),
                          )
                        ),
+                       br(),
                        fluidRow(
                          column(
                            width = 10,
                            offset = 1,
-                           #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
-                           selectInput(inputId = "protein_file",
-                                       label = "Choose Protein Model to Visualise Mutations On:",
-                                       list("2009 H1N1 influenza virus hemagglutinin" = "3LZG",
-                                            "A/Hong Kong/1/1968 (H3N2) influenza virus hemagglutinin" = "6CEX",
-                                            "H5N1 influenza virus hemagglutinin" = "2FK0"),
-                                       width = 999),
+                           uiOutput("protein_analysis_user"),
                            r3dmolOutput("mol_user", height = "500px"),
                            hr(),
                            plotlyOutput("plot_epitope_user", height = "500px", width = "100%"),
                          )
                        ),
+                       br(),
                        fluidRow(
                          column(
+                           br(),
                            width = 12,
                            dataTableOutput("segment_summary_usr")
                          )
@@ -154,7 +180,6 @@ ui <- fluidPage(
 
 # Define server logic ----
 server <- function(input, output) {
-  
   
   ## execute code
   result_ready <- reactiveVal(FALSE)
@@ -287,8 +312,8 @@ server <- function(input, output) {
       stdout = TRUE,
       stderr = TRUE
     )
-    message("MUSCLE status: ", attr(muscle_status, "status"))
-    message("MUSCLE output:\n", paste(muscle_status, collapse = "\n"))
+    message("muscle status: ", attr(muscle_status, "status"))
+    message("muscle output:\n", paste(muscle_status, collapse = "\n"))
     
     if (!file.exists(temp_out)) {
       stop("MUSCLE did not produce aligned.fasta, check logs above.")
@@ -463,7 +488,7 @@ server <- function(input, output) {
         date_labels = "%Y-%m"
       )+
       labs(color="",shape="")+
-      ylab("Vaccine efficacy ((u - v)/v)")+
+      ylab("Vaccine efficacy ((u - v)/u)")+
       xlab("Date (Year-month)")+
       theme_minimal()+
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
@@ -761,7 +786,18 @@ server <- function(input, output) {
                               alignment = "bottomRight")
       )
       
-  }) 
+  })
+  
+  output$protein_analysis_user <- renderUI({
+    req(result_ready())
+    
+    selectInput(inputId = "protein_file",
+                label = "Choose Protein Model to Visualise Mutations On:",
+                list("2009 H1N1 influenza virus hemagglutinin" = "3LZG",
+                     "A/Hong Kong/1/1968 (H3N2) influenza virus hemagglutinin" = "6CEX",
+                     "H5N1 influenza virus hemagglutinin" = "2FK0"),
+                width = 999)
+  })
 }
 
 # Run the app ----
