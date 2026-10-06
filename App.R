@@ -156,7 +156,6 @@ ui <- fluidPage(
                            width = 5,
                            uiOutput("vax_strain_ui")
                          ),
-                           ),
                          column(
                            width = 2,
                            dateInput("date1", "Collected Date:", value = "2020-02-10")
@@ -212,6 +211,7 @@ ui <- fluidPage(
                        fluidRow(tags$p("TBD"))
                        )
               )
+)
 
 # Define server logic ----
 server <- function(input, output) {
