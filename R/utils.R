@@ -10,7 +10,11 @@ normalize_date <- function(x) {
   return(x_edit)
 }
 
-
+get_fasta_headers <- function(path) {
+  lines <- readLines(path, warn = FALSE)
+  headers <- lines[startsWith(lines,">")]
+  setNames(headers, headers)
+}
 
 translate_AA <- function(X){
   

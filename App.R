@@ -22,7 +22,7 @@ ui <- fluidPage(
   
   titlePanel(
     div(
-      p("FluWatch ☢️ \n", tags$em('@TropMed')),
+      p("AntiFlu ☢️ \n", tags$em('@TropMed')),
       tags$style(HTML(
         "body{margin-top: 50px;}"
       )),
@@ -141,6 +141,23 @@ ui <- fluidPage(
                            )
                          ),
                          column(
+                           width = 5,
+                           radioButtons( 
+                             inputId = "subtype_choice", 
+                             label = "Vaccine Type", 
+                             choices = list( 
+                               "H1N1" = "H1N1", 
+                               "VIC" = "VIC",
+                               "H3N2" = "H3N2"
+                             ),
+                           )
+                         ),
+                         column(
+                           width = 5,
+                           uiOutput("vax_strain_ui")
+                         ),
+                           ),
+                         column(
                            width = 2,
                            dateInput("date1", "Collected Date:", value = "2020-02-10")
                          ),
@@ -195,7 +212,6 @@ ui <- fluidPage(
                        fluidRow(tags$p("TBD"))
                        )
               )
-  )
 
 # Define server logic ----
 server <- function(input, output) {
@@ -296,6 +312,25 @@ server <- function(input, output) {
     
   })
   
+  ## select virus strain ##
+  output$vax_strain_ui <- renderUI({
+    req(input$subtype_choice)
+    path <- switch(
+      input$subtype_choice,
+      "H1N1" = "data/02_vaccine_strain/H1N1.fasta",
+      "VIC" = "data/02_vaccine_strain/VIC.fasta",
+      "H3N2" = "data/02_vaccine_strain/H3N2.fasta"
+    )
+    
+    headers <- get_fasta_headers(path)
+    
+    selectInput(
+      inputId = "vaccine_strain",
+      label = "Vaccine Strain to Compare",
+      choices = headers
+    )
+  })
+  
   ## prediction ##
   
   pred <- reactive({
@@ -304,13 +339,16 @@ server <- function(input, output) {
     req(file.exists(file))
     dir.create("result/tmp", recursive = TRUE, showWarnings = FALSE)
     
-    type <- subtype()
+    type <- input$subtype_choice
     
     sample <- readDNAStringSet("result/consensus/draft_segment_4.fasta")
     sample_AA <- translate_AA(sample)
   
     # Target
-    vaccine_strain <- readAAStringSet(paste0("data/02_vaccine_strain/",type,".fasta"))[5]
+    vax_id <- input$vaccine_strain
+    vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",type,".fasta"))
+    vax_id_clean <- sub("^>", "", vax_id)
+    vaccine_strain <- vacx[vax_id_clean]
     names(vaccine_strain) <- "reference"
     
     # Circulating strain
@@ -416,7 +454,7 @@ server <- function(input, output) {
       
       if (v[1] == "sample") {
         vec_idx <- c(vec_idx,idx)
-        vec_date <- c(vec_date,"2022-01-01")
+        vec_date <- c(vec_date, as.character(input$date1))
         vec_id <- c(vec_id,v[1])
         vec_clade <- c(vec_clade,"unassigned")
         
@@ -479,7 +517,7 @@ server <- function(input, output) {
     
     E <- round(unique(0.53-demo_df[demo_df$type == clicked_strain_user(),2]),3)*100
     paste0("Vaccine efficacy of ",clicked_strain_user(),"\n",
-           "compared with A/Victoria/2570/2019 strain is reduced by ",E," percent")
+           "compared with ", paste0(input$vaccine_strain),"strain is reduced by ",E," percent")
   })
   
   
