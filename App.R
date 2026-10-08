@@ -166,6 +166,7 @@ ui <- fluidPage(
                            actionButton("run_pipeline", "Start", class = "btn-primary")
                          )
                        ),
+                       br(),
                        fluidRow(
                          column(
                            width = 12,
@@ -327,7 +328,8 @@ server <- function(input, output) {
     selectInput(
       inputId = "vaccine_strain",
       label = "Vaccine Strain to Compare",
-      choices = headers
+      choices = headers,
+      width = "100%"
     )
   })
   
