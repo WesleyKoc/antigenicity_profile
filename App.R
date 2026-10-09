@@ -22,7 +22,7 @@ ui <- fluidPage(
   
   titlePanel(
     div(
-      p("AntiFlu ☢️ \n", tags$em('@TropMed')),
+      p("FluWatch ☢️ \n", tags$em('@TropMed')),
       tags$style(HTML(
         "body{margin-top: 50px;}"
       )),
