@@ -16,6 +16,10 @@ source("R/utils.R")
 options(shiny.maxRequestSize = 1024 * 1024 * 2048) # 2 GB
 #unlink("result", recursive = TRUE)
 
+brrep <- function(pixels = 20) {
+  div(style = sprintf("height: %dpx;", pixels))
+}
+
 # Define UI ----
 ui <- fluidPage(
   theme = bs_theme(version = 5, bootswatch = "morph"),
@@ -75,10 +79,18 @@ ui <- fluidPage(
                            div(id="demo_protein_model_section",
                                #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
                                selectInput(inputId = "protein_file",
-                                           label = "Choose Protein Model to Visualise Mutations On:",
-                                           list("2009 H1N1 influenza virus hemagglutinin" = "3LZG",
-                                                "A/Hong Kong/1/1968 (H3N2) influenza virus hemagglutinin" = "6CEX",
-                                                "H5N1 influenza virus hemagglutinin" = "2FK0"),
+                                           label = "Choose Protein Model to Visualise Hemagglutinin Mutations On:",
+                                           list("2009 H1N1 influenza virus" = "3LZG",
+                                                "H3N2 A/Hong Kong/1/1968 influenza virus hemagglutinin" = "6CEX",
+                                                "H5N1 influenza virus" = "2FK0",
+                                                "H5N1 A/goose/Guangdong/1/96" = "4MHI",
+                                                "H5N1 hemagglutinin mutant (N158D, N224K and Q226L) A/Viet Nam/1203/2004"="4N5Y",
+                                                "H10N8 A/Jiangxi-Donghu/346/2013"="4WSX",
+                                                "H17N10 A/little yellow-shouldered bat/Guatemala/060/2010"="4H32",
+                                                "H1N1 A/South Carolina/1/1918"="4JUG",
+                                                "H5N1 A/duck/Laos/3295/2006(H5N1)"="4JUL",
+                                                "H7N9 A/Hong Kong/61/2016"="6D7C"
+                                                ),
                                            width = 999),
                                r3dmolOutput("mol", height = "500px"),
                                br(),
@@ -209,7 +221,37 @@ ui <- fluidPage(
                          }"
                        )),
                        br(),
-                       fluidRow(tags$p("TBD"))
+                       fluidRow(
+                         tags$h1("Welcome to FluWatch, the influenza vaccine antigenicity detector!"),
+                         hr(style = "border-top: 2px solid #337ab7;"),
+                         tags$p("Start off by selecting if you wanna do both genome assembly and antigenicity prediction, or just antigenicity prediction."),
+                         tags$p("If you're doing genome assembly and antigenicity prediction, you need to provide a FastQ file of your desired influenza strain's haemagglutinin protein DNA sequencing data."),
+                         brrep(1),
+                         tags$img(src = "app_images/genomeassem+antigen.png", style = "width: 65%; height: 65%"), 
+                         brrep(10),
+                         tags$p("If you're only doing antigenicity prediction, you need to provide a Fasta file of your desired influenza strain's haemagglutinin protein's DNA sequence"),
+                         brrep(1),
+                         tags$img(src = "app_images/antigenonly.png", style = "width: 65%; height: 65%"),
+                         brrep(2),
+                         tags$p("Either way, the upload should only take a few seconds"),
+                         brrep(4),
+                         hr(style = "border-top: 2px solid #337ab7;"),
+                         brrep(4),
+                         tags$p("Once the upload is complete, you need to select a vaccine strain to compare against"),
+                         brrep(2),
+                         tags$img(src="app_images/analysisinput.png", width="100%", height="100%"),
+                         brrep(2),
+                         tags$p("The selection starts with whether the inactivated vaccine targets H1N1, VIC, or H3N2, select as appropriate"),
+                         tags$p("Then, the dropdown menu will show you the vaccine strains in the given target you selected available for comparing against"),
+                         tags$p("The number of options per vaccine target will be updated over time as more data gets added to the database"),
+                         tags$p("The default selection is H1N1 strain A/California/7/2009"),
+                         brrep(4),
+                         hr(style = "border-top: 2px solid #337ab7;"),
+                         brrep(4),
+                         tags$p("If you want, there is an option to change the collection date of your data"),
+                         tags$img(src="app_images/dateselection.png", width="100%", height="100%"),
+                         tags$p("It simply eases the comparison of the antigenicity against different vaccine strains, but it has little effect on the final result"),
+                         )
                        )
               )
 )
@@ -851,9 +893,16 @@ server <- function(input, output) {
     
     selectInput(inputId = "protein_file",
                 label = "Choose Protein Model to Visualise Mutations On:",
-                list("2009 H1N1 influenza virus hemagglutinin" = "3LZG",
-                     "A/Hong Kong/1/1968 (H3N2) influenza virus hemagglutinin" = "6CEX",
-                     "H5N1 influenza virus hemagglutinin" = "2FK0"),
+                list("2009 H1N1 influenza virus" = "3LZG",
+                     "H3N2 A/Hong Kong/1/1968 influenza virus hemagglutinin" = "6CEX",
+                     "H5N1 influenza virus" = "2FK0",
+                     "H5N1 A/goose/Guangdong/1/96" = "4MHI",
+                     "H5N1 hemagglutinin mutant (N158D, N224K and Q226L) A/Viet Nam/1203/2004"="4N5Y",
+                     "H10N8 A/Jiangxi-Donghu/346/2013"="4WSX",
+                     "H17N10 A/little yellow-shouldered bat/Guatemala/060/2010"="4H32",
+                     "H1N1 A/South Carolina/1/1918"="4JUG",
+                     "H5N1 A/duck/Laos/3295/2006(H5N1)"="4JUL",
+                     "H7N9 A/Hong Kong/61/2016"="6D7C"),
                 width = 999)
   })
 }
