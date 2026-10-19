@@ -10,6 +10,7 @@ library(bio3d)
 library(Biostrings)
 library(pwalign)
 library(bslib)
+library(msaR)
 data(BLOSUM100)
 source("R/config.R")
 source("R/utils.R")
@@ -191,6 +192,12 @@ ui <- fluidPage(
                          )
                        ),
                        br(),
+                       fluidRow(
+                         column(
+                           width=10,
+                           msaROutput("alignment", height="500px", width = "100%")
+                         )
+                       ),
                        fluidRow(
                          column(
                            width = 10,
@@ -496,8 +503,7 @@ server <- function(input, output) {
     
     type <- input$subtype_choice
     
-    sample <- readDNAStringSet("result/consensus/draft_segment_4.fasta")
-    sample_AA <- translate_AA(sample)
+    sample_AA <- translate_AA(readDNAStringSet("result/consensus/draft_segment_4.fasta"))
   
     # Target
     vax_id <- input$vaccine_strain
@@ -750,6 +756,55 @@ server <- function(input, output) {
     fig
   })
   
+  
+  #Set up pairwise alignment logic
+  
+  alignment_prep <- reactive({
+    
+    req(input$subtype_choice, input$vaccine_strain)
+    
+    #Sample sequence
+    file <- "result/consensus/draft_segment_4.fasta"
+    req(file.exists(file))
+    
+    sample_AA <- translate_AA(readDNAStringSet("result/consensus/draft_segment_4.fasta"))
+    names(sample_AA) <- "sample"
+    
+    #Target
+    vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",type,".fasta"))
+    req(file.exists(file.path("data/02_vaccine_strain",paste0(input$subtype_choice, ".fasta"))))
+    vax_ids <- sub("\\s+.*$", "", names(vacx))
+    idx <- match(input$vaccine_strain, vax_ids)
+    reference_AA <- vacx[idx]
+    names(reference_AA) <- "reference"
+    
+    #pairwise alignment
+    alignment <- pwalign::pairwiseAlignment(
+      pattern = sample_AA[[1]],
+      subject = reference_AA[[1]],
+      type = "global",
+      substitutionMatrix = "BLOSUM62",
+      gapOpening = 10,
+      gapExtension = 0.5
+    )
+    
+    AAStringSet(list(
+      "Sample" = pwalign::alignedPattern(alignment),
+      "Reference" = pwalign::alignedSubject(alignment)
+    ))
+  })
+  
+  #cir_strain = user-selected circulating strain sequence
+  #vaccine_strain = user-selected vaccine strain
+  #
+  output$alignment <- renderMsaR({
+    req(alignment_prep())
+    msaR(alignment_prep(),
+         menu = TRUE,
+         overviewbox = TRUE,
+         colorscheme = "clustal",
+         height = "500px")
+  })
   
   output$mol_user <- renderR3dmol({
     
