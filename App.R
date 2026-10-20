@@ -183,7 +183,9 @@ ui <- fluidPage(
                        fluidRow(
                          column(
                            width = 12,
-                           div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", textOutput("demo_report_user")),
+                           div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; 
+                               background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; 
+                               margin:0 auto;", uiOutput("demo_report_user")),
                            br(),
                            div(
                              style = "width: 100%; margin: 0 auto;",
@@ -194,7 +196,15 @@ ui <- fluidPage(
                        br(),
                        fluidRow(
                          column(
-                           width=10,
+                           width=12,
+                           h4("Amino Acid Differences/Mismatches"),
+                           textOutput("mismatches")
+                         )
+                       ),
+                       br(),
+                       fluidRow(
+                         column(
+                           width=12,
                            msaROutput("alignment", height="500px", width = "100%")
                          )
                        ),
@@ -669,7 +679,7 @@ server <- function(input, output) {
   })
   
   ###
-  output$demo_report_user <- renderText({
+  output$demo_report_user <- renderUI({
     
     req(result_ready()) 
     
@@ -677,8 +687,16 @@ server <- function(input, output) {
     demo_df$group <- ifelse(demo_df$type == "sample|unassigned","samples","Circulating strains")
     
     E <- round(unique(0.53-demo_df[demo_df$type == clicked_strain_user(),2]),3)*100
-    paste0("Vaccine efficacy of ",clicked_strain_user(),"\n",
-           "compared with ", paste0(input$vaccine_strain),"strain is reduced by ",E," percent")
+    if (input$subtype_choice == "H1N1") {
+      max_score = "0.53 (53%)"
+    } else if (input$subtype_choice == "H3N2") {
+      max_score = "0.47 (47%)"
+    } else {
+      max_score = "0.68 (68%)"
+      }
+    HTML(paste0("Vaccine efficacy of ",clicked_strain_user(),
+           " compared with ", paste0(input$vaccine_strain)," strain is reduced by ",E," percent
+           <br>Note: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score))
   })
   
   
@@ -771,10 +789,11 @@ server <- function(input, output) {
     names(sample_AA) <- "sample"
     
     #Target
-    vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",type,".fasta"))
     req(file.exists(file.path("data/02_vaccine_strain",paste0(input$subtype_choice, ".fasta"))))
-    vax_ids <- sub("\\s+.*$", "", names(vacx))
-    idx <- match(input$vaccine_strain, vax_ids)
+    vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",input$subtype_choice,".fasta"))
+    vax_ids <-sub(">","",input$vaccine_strain)
+    idx <- match(vax_ids, names(vacx))
+    validate(need(!is.na(idx), paste("Selected vaccine strain (", vax_ids, ") not found")))
     reference_AA <- vacx[idx]
     names(reference_AA) <- "reference"
     
@@ -788,22 +807,44 @@ server <- function(input, output) {
       gapExtension = 0.5
     )
     
-    AAStringSet(list(
-      "Sample" = pwalign::alignedPattern(alignment),
-      "Reference" = pwalign::alignedSubject(alignment)
-    ))
+    aligndpair <- c(
+      pwalign::alignedPattern(alignment),
+      pwalign::alignedSubject(alignment)
+    )
+    
+    names(aligndpair) <- c("User Input", "Selected Vaccine")
+    
+    aligndpair
+    
   })
   
   #cir_strain = user-selected circulating strain sequence
   #vaccine_strain = user-selected vaccine strain
   #
   output$alignment <- renderMsaR({
-    req(alignment_prep())
-    msaR(alignment_prep(),
+    align <- alignment_prep()
+    msaR(align,
          menu = TRUE,
          overviewbox = TRUE,
-         colorscheme = "clustal",
-         height = "500px")
+         colorscheme = "taylor",
+         height = "500px",
+         seqlogo = FALSE)
+  })
+  
+  mismatches <- reactive({
+    aligned <- alignment_prep()
+    user_input <- strsplit(as.character(aligned[[1]]),"")[[1]]
+    vaccine <- strsplit(as.character(aligned[[2]]),"")[[1]]
+    vax_pos <- cumsum(vaccine != "-")
+    changes <- vaccine[vaccine != user_input]
+    if (length(changes) == 0){
+      return("All amino acids identical")
+    }
+    paste0(vaccine[vaccine != user_input], vax_pos[vaccine != user_input], user_input[vaccine != user_input], collapse = ", ")
+  })
+  
+  output$mismatches <- renderText({
+    mismatches()
   })
   
   output$mol_user <- renderR3dmol({
@@ -1071,6 +1112,8 @@ server <- function(input, output) {
                      "H7N9 A/Hong Kong/61/2016"="6D7C"),
                 width = 999)
   })
+  
+  
 }
 
 # Run the app ----
