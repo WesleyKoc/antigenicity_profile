@@ -4,19 +4,8 @@
 # - So date of collection option shows how well a patient who received the vaccine x years ago would fare if encountered strain y in year z
 #Give options for users to input their own vaccine sequence
 
-library(ggplot2)
-library(data.table)
-library(shiny)
-library(plotly)
-library(cli)
-library(shinycssloaders)
-library(DT)
-library(r3dmol)
-library(bio3d)
-library(Biostrings)
-library(pwalign)
-library(bslib)
-library(msaR)
+packages <- c("ggplot2","data.table","shiny","plotly","cli","shinycssloaders","DT","r3dmol","bio3d","Biostrings","pwalign","bslib","msaR")
+invisible(lapply(packages, library, character.only = TRUE))
 data(BLOSUM100)
 source("R/config.R")
 source("R/utils.R")
@@ -32,26 +21,15 @@ ui <- fluidPage(
   theme = bs_theme(version = 5, bootswatch = "morph"),
   
   titlePanel(
-    div(
-      p("FluWatch ☢️ \n", tags$em('@TropMed')),
-      tags$style(HTML(
-        "body{margin-top: 50px;}"
-      )),
+    div(p("FluWatch ☢️ \n", tags$em('@TropMed')),
+      tags$style(HTML("body{margin-top: 50px;}")),
       style = "min-height: 120px; display: flex; justify-content: center;
-      align-items: center; width: 100%; font-family: 'Times New Roman'; font-size: 3.5vw"
-        )
-    ),
+      align-items: center; width: 100%; font-family: 'Times New Roman'; font-size: 3.5vw")),
   
   # Main panel content first
   tabsetPanel(type = "tabs",
               tabPanel("Demo",
-                       tags$style(HTML(
-                         "body {
-                           margin-right: 150px;
-                           margin-left: 150px;
-                           margin-bottom: 150px;
-                         }"
-                       )),
+                       tags$style(HTML("body {margin-right: 150px;margin-left: 150px;margin-bottom: 150px;}")),
                        br(),
                        fluidRow(tags$p("Welcome to FluWatch! A tool for testing if your influenza virus strain works with current vaccine strains in circulation!"),
                          tags$a(href="https://www.youtube.com/watch?v=9XDaVNsC_4g", "Click here for a youtube demo of the app!")),
@@ -60,9 +38,7 @@ ui <- fluidPage(
                            width = 12,
                            br(),
                            div(id="demo_report_section",
-                             div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; 
-                               background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", 
-                                 textOutput("demo_report")),
+                             div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", textOutput("demo_report")),
                              )
                            )
                          ),
@@ -71,18 +47,10 @@ ui <- fluidPage(
                          column(
                            width = 12,
                            div(id="antigenicity_demo_section",
-                               div(
-                                 style = "width: 100%; margin: 0 auto;",
-                                 plotlyOutput("plot_antigencity", height = "500px")
-                                 )
-                               )
-                           )
-                       ),
+                               div(style = "width: 100%; margin: 0 auto;",plotlyOutput("plot_antigencity", height = "500px"))))),
                        hr(),
                        fluidRow(
-                         column(
-                           width = 10,
-                           offset=1,
+                         column(width = 10,offset=1,
                            div(id="demo_protein_model_section",
                                #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
                                selectInput(inputId = "protein_file",
@@ -96,8 +64,7 @@ ui <- fluidPage(
                                                 "H17N10 A/little yellow-shouldered bat/Guatemala/060/2010"="4H32",
                                                 "H1N1 A/South Carolina/1/1918"="4JUG",
                                                 "H5N1 A/duck/Laos/3295/2006(H5N1)"="4JUL",
-                                                "H7N9 A/Hong Kong/61/2016"="6D7C"
-                                                ),
+                                                "H7N9 A/Hong Kong/61/2016"="6D7C"),
                                            width = 999),
                                r3dmolOutput("mol", height = "500px"),
                                br(),
@@ -107,47 +74,24 @@ ui <- fluidPage(
                          ),
                       hr(),
                       br(),
-                      fluidRow(
-                        column(
-                          width = 12,
-                          dataTableOutput("segment_summary")
-                          )
-                        )),
+                      fluidRow(column(width = 12,dataTableOutput("segment_summary")))),
               tabPanel("User's analysis",
-                       tags$style(HTML(
-                         "body {
-                           margin-right: 150px;
-                           margin-left: 150px;
-                         }
-                         .radio label {
-                         white-space: nowrap;
-                         }"
-                       )),
+                       tags$style(HTML("body {margin-right: 150px;margin-left: 150px;}.radio label {white-space: nowrap;}")),
                        br(),
                        fluidRow(
                          column(
                            width = 5,
                            br(),
-                           radioButtons( 
-                             inputId = "radio", 
-                             label = "Analysis Type", 
-                             choices = list( 
-                               "Genome Assembly with Antigenicity Prediction" = 1, 
-                               "Antigenicity Prediction Only" = 2
-                             ),
+                           radioButtons( inputId = "radio", label = "Analysis Type", 
+                             choices = list( "Genome Assembly with Antigenicity Prediction" = 1, "Antigenicity Prediction Only" = 2),
                            )
                          ),
                          column(
                            width = 3,
                            conditionalPanel(
                              condition = "input.radio == 1",
-                             fileInput(
-                               "fastq_files", 
-                               "Upload FASTQ File", 
-                               multiple = FALSE,
-                               accept = c(".fastq",".fastq.gz", ".fq",".fq.gz","application/gzip",
-                                          "application/x-gzip")
-                             )
+                             fileInput("fastq_files", "Upload FASTQ File", multiple = FALSE,
+                               accept = c(".fastq",".fastq.gz", ".fq",".fq.gz","application/gzip","application/x-gzip"))
                            ),
                            conditionalPanel(
                              condition = "input.radio == 2",
@@ -694,6 +638,7 @@ server <- function(input, output) {
     demo_df$group <- ifelse(demo_df$type == "sample|unassigned","samples","Circulating strains")
     
     E <- round(unique(0.53-demo_df[demo_df$type == clicked_strain_user(),2]),3)*100
+    result <- if (E <= 100) E else 100
     if (input$subtype_choice == "H1N1") {
       max_score = "0.53 (53%)"
     } else if (input$subtype_choice == "H3N2") {
@@ -702,7 +647,7 @@ server <- function(input, output) {
       max_score = "0.68 (68%)"
       }
     HTML(paste0("Vaccine efficacy of ",clicked_strain_user(),
-           " compared with ", paste0(input$vaccine_strain)," strain is reduced by ",E," percent
+           " compared with ", paste0(input$vaccine_strain)," strain is reduced by ",result," percent
            <br>Note: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score))
   })
   
@@ -754,9 +699,7 @@ server <- function(input, output) {
   
   
   output$plot_epitope_user <- renderPlotly({
-    
     req(result_ready()) 
-    
     strain <- clicked_strain_user()
     dx <- pred()$ecount[strain][[1]]
     print(dx)
