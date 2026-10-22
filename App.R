@@ -3,8 +3,6 @@
 #Use general rules (nothing too complex) to model how vaccine changes over time in patient
 # - So date of collection option shows how well a patient who received the vaccine x years ago would fare if encountered strain y in year z
 #Give options for users to input their own vaccine sequence
-#
-#For practical efficacy score: force everything below 0 to 0%, leave antigenicity plot alone
 
 library(ggplot2)
 library(data.table)
@@ -840,6 +838,15 @@ server <- function(input, output) {
          seqlogo = FALSE)
   })
   
+  mismatch_pos <- reactive({
+    aligned <- alignment_prep()
+    user_input <- strsplit(as.character(aligned[[1]]),"")[[1]]
+    vaccine <- strsplit(as.character(aligned[[2]]),"")[[1]]
+    vax_pos <- cumsum(vaccine != "-")
+    keep <- vaccine !=user_input
+    vax_pos[keep]
+  })
+  
   mismatches <- reactive({
     aligned <- alignment_prep()
     user_input <- strsplit(as.character(aligned[[1]]),"")[[1]]
@@ -862,6 +869,10 @@ server <- function(input, output) {
 
     #type <- subtype()
     epitope <- clicked_epitope_user()
+    
+    #gather the locations of mutations
+    epitope_ranges <- switch(input$subtype_choice, "H1N1" = H1N1_idx, "H3N2" = H3N2_idx, "VIC" = VIC_idx)
+    mutantpos <- intersect(mismatch_pos(), epitope_ranges[[epitope]])
     strain <- clicked_strain_user()
     
     idx <- pred()$epi[strain][[1]]
@@ -891,11 +902,11 @@ server <- function(input, output) {
       m_set_style(sel = m_sel(chain = c("A","B","C","D","E","F")),
                   style = m_style_cartoon(color = "lightgray")) %>%
       m_zoom_to() %>%
-      m_set_style(sel = m_sel(chain="A", resi = idx[[epitope]]),
+      m_set_style(sel = m_sel(chain="A", resi = mutantpos),
                   style = m_style_sphere(color = "red",radius = 1)) %>%
       m_add_res_labels(
         m_sel(
-          resi = idx[[epitope]],
+          resi = mutantpos,
           chain = "A"
         ),
         style = m_style_label(inFront = T,font = list(size = 6),
