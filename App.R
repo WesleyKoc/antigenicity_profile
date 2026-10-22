@@ -1,3 +1,11 @@
+#TODO
+#Set up so user can input multiple seqs at a time + give ratio --> simulate real flu season
+#Use general rules (nothing too complex) to model how vaccine changes over time in patient
+# - So date of collection option shows how well a patient who received the vaccine x years ago would fare if encountered strain y in year z
+#Give options for users to input their own vaccine sequence
+#
+#For practical efficacy score: force everything below 0 to 0%, leave antigenicity plot alone
+
 library(ggplot2)
 library(data.table)
 library(shiny)
@@ -594,7 +602,8 @@ server <- function(input, output) {
         # The simple linear model for antigenicity prediction
         # You might want to refine model later
         ##############################################################################
-        Pepitope <- sum(score)/length(epitope)    
+        mostdiverge_epitope <- names(which.max(sapply(idx_sub, length)))
+        Pepitope <- sum(score)/length(epitope[[mostdiverge_epitope]])    
         if (type == "H1N1") {
           E <- -1.19*Pepitope+0.53
 
