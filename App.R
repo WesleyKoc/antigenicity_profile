@@ -2,7 +2,7 @@
 #Set up so user can input multiple seqs at a time + give ratio --> simulate real flu season
 #Use general rules (nothing too complex) to model how vaccine changes over time in patient
 # - So date of collection option shows how well a patient who received the vaccine x years ago would fare if encountered strain y in year z
-#Give options for users to input their own vaccine sequence
+#Give options for users to input their own vaccine sequence, otherwise give a default list
 
 packages <- c("ggplot2","data.table","shiny","plotly","cli","shinycssloaders","DT","r3dmol","bio3d","Biostrings","pwalign","bslib","msaR")
 invisible(lapply(packages, library, character.only = TRUE))
@@ -105,6 +105,14 @@ ui <- fluidPage(
                          ),
                          column(
                            width = 5,
+                           br(),
+                           radioButtons( inputId = "vaxtype", label = "Do you have your own vaccine sequence?", 
+                                         choices = list( "Yes" = 1, "No" = 2),
+                           )
+                         ),
+                         column(
+                           width = 5,
+                           conditionalPanel(condition = 'input.vaxtype == 2',
                            radioButtons( 
                              inputId = "subtype_choice", 
                              label = "Vaccine Type", 
@@ -114,6 +122,12 @@ ui <- fluidPage(
                                "H3N2" = "H3N2"
                              ),
                            )
+                           ),
+                           conditionalPanel(condition = "input.vaxtype == 1",
+                                            fileInput("vax_fastafiles", "Upload FASTA File", multiple = FALSE,
+                                              accept = c(".fasta",".fasta.gz", ".fa",".fa.gz")),
+                                            radioButtons(inputId = "uploaded_subtype", label="What's your sample's subtype?",
+                                                         choices = list("H1N1" = "H1N1", "VIC"="VIC", "H3N2"="H3N2")))
                          ),
                          column(
                            width = 5,
@@ -337,6 +351,10 @@ ui <- fluidPage(
 # Define server logic ----
 server <- function(input, output) {
   
+  current_subtype <- reactive({
+    if (identical(input$vaxtype, "1")) input$uploaded_subtype else input$subtype_choice
+  })
+  
   ## execute code
   result_ready <- reactiveVal(FALSE)
   observeEvent(input$run_pipeline, {
@@ -402,8 +420,6 @@ server <- function(input, output) {
     result_ready(TRUE)
   }, ignoreInit = TRUE)
 
-  
-
   ## check subtypes ##
   subtype <- reactive({
     
@@ -435,9 +451,9 @@ server <- function(input, output) {
   
   ## select virus strain ##
   output$vax_strain_ui <- renderUI({
-    req(input$subtype_choice)
+    req(input$vaxtype == "2", current_subtype())
     path <- switch(
-      input$subtype_choice,
+      current_subtype(),
       "H1N1" = "data/02_vaccine_strain/H1N1.fasta",
       "VIC" = "data/02_vaccine_strain/VIC.fasta",
       "H3N2" = "data/02_vaccine_strain/H3N2.fasta"
@@ -453,6 +469,15 @@ server <- function(input, output) {
     )
   })
   
+  chosen_subtype <- reactive(
+    if (input$vaxtype == "2") {
+      req(current_subtype())
+      current_subtype()
+    } else {
+      subtype()
+    }
+  )
+  
   ## prediction ##
   
   pred <- reactive({
@@ -461,15 +486,20 @@ server <- function(input, output) {
     req(file.exists(file))
     dir.create("result/tmp", recursive = TRUE, showWarnings = FALSE)
     
-    type <- input$subtype_choice
+    type <- current_subtype()
     
     sample_AA <- translate_AA(readDNAStringSet("result/consensus/draft_segment_4.fasta"))
   
     # Target
+    if (identical(input$vaxtype, "1")) {
+      req(current_subtype())
+      vaccine_strain <- readAAStringSet(current_subtype()$datapath) [1]
+    }else {
     vax_id <- input$vaccine_strain
     vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",type,".fasta"))
     vax_id_clean <- sub("^>", "", vax_id)
     vaccine_strain <- vacx[vax_id_clean]
+    }
     names(vaccine_strain) <- "reference"
     
     # Circulating strain
@@ -639,15 +669,16 @@ server <- function(input, output) {
     
     E <- round(unique(0.53-demo_df[demo_df$type == clicked_strain_user(),2]),3)*100
     result <- if (E <= 100) E else 100
-    if (input$subtype_choice == "H1N1") {
+    if (current_subtype() == "H1N1") {
       max_score = "0.53 (53%)"
-    } else if (input$subtype_choice == "H3N2") {
+    } else if (current_subtype() == "H3N2") {
       max_score = "0.47 (47%)"
     } else {
       max_score = "0.68 (68%)"
-      }
+    }
+    vax_label <- if (identical(input$vaxtype, "1")) current_subtype()$name else input$vaccine_strain
     HTML(paste0("Vaccine efficacy of ",clicked_strain_user(),
-           " compared with ", paste0(input$vaccine_strain)," strain is reduced by ",result," percent
+           " compared with ", vax_label," strain is reduced by ",result," percent
            <br>Note: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score))
   })
   
@@ -729,7 +760,8 @@ server <- function(input, output) {
   
   alignment_prep <- reactive({
     
-    req(input$subtype_choice, input$vaccine_strain)
+    req(current_subtype())
+    if (identical(input$vaxtype, "1")) req(current_subtype()) else req(input$vaccine_strain)
     
     #Sample sequence
     file <- "result/consensus/draft_segment_4.fasta"
@@ -739,12 +771,17 @@ server <- function(input, output) {
     names(sample_AA) <- "sample"
     
     #Target
-    req(file.exists(file.path("data/02_vaccine_strain",paste0(input$subtype_choice, ".fasta"))))
-    vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",input$subtype_choice,".fasta"))
+    type <- current_subtype()
+    if (identical(input$vaxtype, "1")){
+      reference_AA <- readAAStringSet(current_subtype()$datapath) [1]
+    } else {
+    req(file.exists(file.path("data/02_vaccine_strain",paste0(current_subtype(), ".fasta"))))
+    vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",current_subtype(),".fasta"))
     vax_ids <-sub(">","",input$vaccine_strain)
     idx <- match(vax_ids, names(vacx))
     validate(need(!is.na(idx), paste("Selected vaccine strain (", vax_ids, ") not found")))
     reference_AA <- vacx[idx]
+    }
     names(reference_AA) <- "reference"
     
     #pairwise alignment
@@ -814,7 +851,7 @@ server <- function(input, output) {
     epitope <- clicked_epitope_user()
     
     #gather the locations of mutations
-    epitope_ranges <- switch(input$subtype_choice, "H1N1" = H1N1_idx, "H3N2" = H3N2_idx, "VIC" = VIC_idx)
+    epitope_ranges <- switch(current_subtype(), "H1N1" = H1N1_idx, "H3N2" = H3N2_idx, "VIC" = VIC_idx)
     mutantpos <- intersect(mismatch_pos(), epitope_ranges[[epitope]])
     strain <- clicked_strain_user()
     
