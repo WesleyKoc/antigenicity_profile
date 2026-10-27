@@ -2,7 +2,6 @@
 #Set up so user can input multiple seqs at a time + give ratio --> simulate real flu season
 #Use general rules (nothing too complex) to model how vaccine changes over time in patient
 # - So date of collection option shows how well a patient who received the vaccine x years ago would fare if encountered strain y in year z
-#Give options for users to input their own vaccine sequence, otherwise give a default list
 
 packages <- c("ggplot2","data.table","shiny","plotly","cli","shinycssloaders","DT","r3dmol","bio3d","Biostrings","pwalign","bslib","msaR")
 invisible(lapply(packages, library, character.only = TRUE))
@@ -469,6 +468,7 @@ server <- function(input, output) {
     )
   })
   
+  #TODO: Delete, dead code
   chosen_subtype <- reactive(
     if (input$vaxtype == "2") {
       req(current_subtype())
@@ -492,8 +492,8 @@ server <- function(input, output) {
   
     # Target
     if (identical(input$vaxtype, "1")) {
-      req(current_subtype())
-      vaccine_strain <- readAAStringSet(current_subtype()$datapath) [1]
+      req(input$vax_fastafiles)
+      vaccine_strain <- readAAStringSet(input$vax_fastafiles$datapath) [1]
     }else {
     vax_id <- input$vaccine_strain
     vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",type,".fasta"))
@@ -676,7 +676,7 @@ server <- function(input, output) {
     } else {
       max_score = "0.68 (68%)"
     }
-    vax_label <- if (identical(input$vaxtype, "1")) current_subtype()$name else input$vaccine_strain
+    vax_label <- if (identical(input$vaxtype, "1")) input$vax_fastafiles$name else input$vaccine_strain
     HTML(paste0("Vaccine efficacy of ",clicked_strain_user(),
            " compared with ", vax_label," strain is reduced by ",result," percent
            <br>Note: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score))
@@ -760,8 +760,7 @@ server <- function(input, output) {
   
   alignment_prep <- reactive({
     
-    req(current_subtype())
-    if (identical(input$vaxtype, "1")) req(current_subtype()) else req(input$vaccine_strain)
+    if (identical(input$vaxtype, "1")) req(input$vax_fastafiles) else req(input$vaccine_strain)
     
     #Sample sequence
     file <- "result/consensus/draft_segment_4.fasta"
@@ -773,7 +772,7 @@ server <- function(input, output) {
     #Target
     type <- current_subtype()
     if (identical(input$vaxtype, "1")){
-      reference_AA <- readAAStringSet(current_subtype()$datapath) [1]
+      reference_AA <- readAAStringSet(input$vax_fastafiles$datapath) [1]
     } else {
     req(file.exists(file.path("data/02_vaccine_strain",paste0(current_subtype(), ".fasta"))))
     vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",current_subtype(),".fasta"))
