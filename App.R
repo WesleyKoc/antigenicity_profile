@@ -2,8 +2,13 @@
 #Set up so user can input multiple seqs at a time + give ratio --> simulate real flu season
 #Use general rules (nothing too complex) to model how vaccine changes over time in patient
 # - So date of collection option shows how well a patient who received the vaccine x years ago would fare if encountered strain y in year z
+#Add a print option to the entire report, but the 3D model shouldn't be included
+#Should use nextflow to optimise it
+#Should sort the list of amino acid differences based on epitope
+#There are codon insertions into H1 and H2 as discovered by Book, but all from Pakistan and Oman, so need to read into it, he'll send over the relevant paper
+#Also need to update the help-pages to fit the new functions
 
-packages <- c("ggplot2","data.table","shiny","plotly","cli","shinycssloaders","DT","r3dmol","bio3d","Biostrings","pwalign","bslib","msaR")
+packages <- c("ggplot2","data.table","shiny","plotly","cli","shinycssloaders","DT","r3dmol","bio3d","Biostrings","pwalign","bslib","msaR","tidyverse","ggpubr","gridExtra","htmlwidgets","webshot2","magick")
 invisible(lapply(packages, library, character.only = TRUE))
 data(BLOSUM100)
 source("R/config.R")
@@ -187,6 +192,14 @@ ui <- fluidPage(
                            br(),
                            width = 12,
                            dataTableOutput("segment_summary_usr")
+                         )
+                       ),
+                       br(),
+                       fluidRow(
+                         column(
+                           width = 6,
+                           br(),
+                           downloadButton("export", "Export your report as PDF", class = NULL)
                          )
                        )
                        ),
@@ -520,8 +533,9 @@ server <- function(input, output) {
       stdout = TRUE,
       stderr = TRUE
     )
-    message("muscle status: ", attr(muscle_status, "status"))
-    message("muscle output:\n", paste(muscle_status, collapse = "\n"))
+    #Only use this if muscle isn't working again
+    #message("muscle status: ", attr(muscle_status, "status"))
+    #message("muscle output:\n", paste(muscle_status, collapse = "\n"))
     
     if (!file.exists(temp_out)) {
       stop("MUSCLE did not produce aligned.fasta, check logs above.")
@@ -668,7 +682,8 @@ server <- function(input, output) {
     demo_df$group <- ifelse(demo_df$type == "sample|unassigned","samples","Circulating strains")
     
     E <- round(unique(0.53-demo_df[demo_df$type == clicked_strain_user(),2]),3)*100
-    result <- if (E <= 100) E else 100
+    result <- E
+    #result <- if (E <= 100) E else 100
     if (current_subtype() == "H1N1") {
       max_score = "0.53 (53%)"
     } else if (current_subtype() == "H3N2") {
@@ -684,8 +699,7 @@ server <- function(input, output) {
   
   
   ##plot antigencity
-  output$plot_antigencity_user <- renderPlotly({
-    
+  plot_antigencity_user_object <- reactive ({
     req(result_ready()) 
     demo_df <- pred()$ant
     write.csv(demo_df,"test.csv")
@@ -725,17 +739,19 @@ server <- function(input, output) {
           borderwidth = 1
         )
       )
-    
   })
   
+  output$plot_antigencity_user <- renderPlotly({
+    plot_antigencity_user_object()
+  })
   
-  output$plot_epitope_user <- renderPlotly({
+  plot_epitope_user_object <- reactive ({
     req(result_ready()) 
     strain <- clicked_strain_user()
     dx <- pred()$ecount[strain][[1]]
     print(dx)
     # Plot
-    fig <- plot_ly(
+    plot_ly(
       x = dx$epitopes,
       y = dx$mutations,
       customdata = dx$epitopes,
@@ -751,8 +767,10 @@ server <- function(input, output) {
         font = list(size = 12),
         bargap = 0.3
       )
-    
-    fig
+  })
+  
+  output$plot_epitope_user <- renderPlotly({
+    plot_epitope_user_object()
   })
   
   
@@ -883,6 +901,11 @@ server <- function(input, output) {
       m_zoom_to() %>%
       m_set_style(sel = m_sel(chain="A", resi = mutantpos),
                   style = m_style_sphere(color = "red",radius = 1)) %>%
+      m_set_style(sel = m_sel(resi = c(130:140, 145:150)),style = m_style_cartoon(color = "orange")) %>% #Epitope Site A
+      m_set_style(sel = m_sel(resi = c(155:160, 186:199)),style = m_style_cartoon(color = "yellow")) %>% #Epitope Site B
+      m_set_style(sel = m_sel(resi = 280:300), style = m_style_cartoon(color = "green")) %>% #Epitope Site C
+      m_set_style(sel = m_sel(resi = 245:255), style = m_style_cartoon(color = "blue")) %>% #Epitope Site C
+      m_set_style(sel = m_sel(resi = c(62:63, 75:82, 85:100)),style = m_style_cartoon(color = "purple")) %>% #Epitope Site E
       m_add_res_labels(
         m_sel(
           resi = mutantpos,
@@ -1112,6 +1135,21 @@ server <- function(input, output) {
                 width = 999)
   })
   
+  
+  ## clicking on the export button will generate a pdf file 
+  ## containing all stored plots and tables
+  output$export = downloadHandler(
+    filename = function() {"plots.pdf"},
+    content = function(file) {
+      antigenicityplot_path <- tempfile(fileext = ".png")
+      epitopeplot_path <- tempfile(fileext = ".png")
+      plotly::save_image(plot_antigencity_user_object, antigenicityplot_path, width = 800, height = 600)
+      plotly::save_image(plot_epitope_user_object(), epitopeplot_path, width = 800, height = 600)
+      combined_images <- magick::image_read(c(antigenicityplot_path, epitopeplot_path))
+      magick::image_write(combined_images, path = file, format = "pdf")
+    },
+    contentType = "application/pdf"
+    )
   
 }
 
