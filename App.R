@@ -1159,14 +1159,46 @@ server <- function(input, output) {
       demo_report_user_text <- paste0("Vaccine efficacy of ",clicked_strain_user(),
                   " compared with ", vax_label," strain is reduced by ",result," percent
            \nNote: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score,".\n\nAmino Acid Differences/Mismatches: ",stringr::str_wrap(mismatches()))
-      text_page <- magick::image_blank(width = 800, height = 600, color = "white")
+      text_page <- magick::image_blank(width = 702, height = 496, color = "white")
       text_page <- magick::image_annotate(text_page, demo_report_user_text)
+      aligned <- alignment_prep()
+      align1 <- strsplit(as.character(aligned[[1]]),"")[[1]]
+      align2 <- strsplit(as.character(aligned[[2]]),"")[[1]]
+      length_align <- length(align1)
+      identical_align <- sum(align1 == align2 & align1 != "-")
+      gap_align <- sum(align1 == "-" | align2 == "-")
+      header <- sprintf("Identity: %d/%d (%d%%)  |  Gaps: %d/%d (%d%%)\n\n", identical_align, length_align, round(identical_align/length_align*100), gap_align, length_align, round(gap_align/length_align*100))
+      results <- character(0)
+      position1 <- 1
+      position2 <- 1
+      width<- 60
+      for (i in seq(1, length_align, by = width)) {
+        end_index <- min(i + width - 1, length_align)
+        c1 = align1[i:end_index]
+        c2 = align2[i:end_index]
+        len1 = sum(c1 != "-")
+        len2 = sum(c2 != "-")
+        start1 <-position1
+        end1 <- if (len1 > 0) position1 + len1 -1 else position1
+        start2 <-position2
+        end2 <- if (len2 > 0) position2 + len2 -1 else position2
+        if (len1 > 0) position1 <- len1 +1
+        if (len2 > 0) position2 <- len2 +1
+        symbols <- ifelse(c1 == c2 & c1!="-", "|", ifelse(c1 == "-", " ", "+"))
+        query_line <-sprintf("Query %-4d %s %d", start1, paste(c1, collapse=""), end1)
+        match_line <-sprintf("            %s", paste(symbols, collapse=""))
+        subject_line <-sprintf("Sbjct %-4d %s %d", start2, paste(c2, collapse=""), end2)
+        align_result <- c(results, query_line, match_line, subject_line)
+      }
+      alignment_text <-paste0(header, paste(align_result, collapse="\n"))
+      alignment_page <-magick::image_blank(width = 800, height = 1200, color = "white")
+      alignment_page <- magick::image_annotate(alignment_page, alignment_text, size=14)
       antigenicityplot_path <- tempfile(fileext = ".png")
       epitopeplot_path <- tempfile(fileext = ".png")
-      ggplot2::ggsave(filename=antigenicityplot_path, plot=plot_antigenicity_user_object()$raw, width=8, height=6,dpi=300)
-      plotly::save_image(plot_epitope_user_object(), epitopeplot_path, width = 800, height = 600)
+      ggplot2::ggsave(filename=antigenicityplot_path, plot=plot_antigenicity_user_object()$raw, width=11.7, height=8.3,dpi=300)
+      plotly::save_image(plot_epitope_user_object(), epitopeplot_path, width = 351, height = 248)
       combined_images <- magick::image_read(c(antigenicityplot_path, epitopeplot_path))
-      all_pages <- c(text_page, combined_images)
+      all_pages <- c(text_page, alignment_page, combined_images)
       magick::image_write(all_pages, path = file, format = "pdf")
     },
     contentType = "application/pdf"
