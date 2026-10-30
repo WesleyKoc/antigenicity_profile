@@ -2,7 +2,7 @@
 #Set up so user can input multiple seqs at a time + give ratio --> simulate real flu season
 #Use general rules (nothing too complex) to model how vaccine changes over time in patient
 # - So date of collection option shows how well a patient who received the vaccine x years ago would fare if encountered strain y in year z
-#Add a print option to the entire report, but the 3D model shouldn't be included
+#Add the alignment to the printed report
 #Should use nextflow to optimise it
 #Should sort the list of amino acid differences based on epitope
 #There are codon insertions into H1 and H2 as discovered by Book, but all from Pakistan and Oman, so need to read into it, he'll send over the relevant paper
@@ -699,7 +699,7 @@ server <- function(input, output) {
   
   
   ##plot antigencity
-  plot_antigencity_user_object <- reactive ({
+  plot_antigenicity_user_object <- reactive ({
     req(result_ready()) 
     demo_df <- pred()$ant
     write.csv(demo_df,"test.csv")
@@ -711,10 +711,11 @@ server <- function(input, output) {
                                  "<br>Name:", type,
                                  "<br>Vaccine efficacy:", round(E, 2)
                                ),customdata = type))+
-      geom_point(position = position_dodge(width = .9),alpha=0.7,size=3)+
+      geom_point(alpha=0.7,size=3)+
       geom_hline(yintercept=0.53, linetype="dashed", 
                  color = "red")+
       scale_colour_manual(values = c("grey","red"))+
+      scale_shape_manual(values = c(16, 17))+
       scale_x_date(
         date_breaks = "3 month",
         date_labels = "%Y-%m"
@@ -725,7 +726,6 @@ server <- function(input, output) {
       theme_minimal()+
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
             plot.title = element_text(hjust = 0.5))
-    
     ggplotly(p, tooltip = "text",source = "A_user") |>
       layout(
         legend = list(
@@ -739,10 +739,11 @@ server <- function(input, output) {
           borderwidth = 1
         )
       )
+    list(interactive = ggplotly(p, tooltip = "text", source="A_user"), raw=p)
   })
   
   output$plot_antigencity_user <- renderPlotly({
-    plot_antigencity_user_object()
+    plot_antigenicity_user_object()$interactive
   })
   
   plot_epitope_user_object <- reactive ({
@@ -1139,14 +1140,34 @@ server <- function(input, output) {
   ## clicking on the export button will generate a pdf file 
   ## containing all stored plots and tables
   output$export = downloadHandler(
-    filename = function() {"plots.pdf"},
+    filename = function() {"report.pdf"},
     content = function(file) {
+      demo_df <- pred()$ant
+      demo_df$group <- ifelse(demo_df$type == "sample|unassigned","samples","Circulating strains")
+      
+      E <- round(unique(0.53-demo_df[demo_df$type == clicked_strain_user(),2]),3)*100
+      result <- E
+      #result <- if (E <= 100) E else 100
+      if (current_subtype() == "H1N1") {
+        max_score = "0.53 (53%)"
+      } else if (current_subtype() == "H3N2") {
+        max_score = "0.47 (47%)"
+      } else {
+        max_score = "0.68 (68%)"
+      }
+      vax_label <- if (identical(input$vaxtype, "1")) input$vax_fastafiles$name else input$vaccine_strain
+      demo_report_user_text <- paste0("Vaccine efficacy of ",clicked_strain_user(),
+                  " compared with ", vax_label," strain is reduced by ",result," percent
+           \nNote: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score,".\n\nAmino Acid Differences/Mismatches: ",stringr::str_wrap(mismatches()))
+      text_page <- magick::image_blank(width = 800, height = 600, color = "white")
+      text_page <- magick::image_annotate(text_page, demo_report_user_text)
       antigenicityplot_path <- tempfile(fileext = ".png")
       epitopeplot_path <- tempfile(fileext = ".png")
-      plotly::save_image(plot_antigencity_user_object, antigenicityplot_path, width = 800, height = 600)
+      ggplot2::ggsave(filename=antigenicityplot_path, plot=plot_antigenicity_user_object()$raw, width=8, height=6,dpi=300)
       plotly::save_image(plot_epitope_user_object(), epitopeplot_path, width = 800, height = 600)
       combined_images <- magick::image_read(c(antigenicityplot_path, epitopeplot_path))
-      magick::image_write(combined_images, path = file, format = "pdf")
+      all_pages <- c(text_page, combined_images)
+      magick::image_write(all_pages, path = file, format = "pdf")
     },
     contentType = "application/pdf"
     )
