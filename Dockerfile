@@ -1,5 +1,5 @@
-# Base image: RStudio + R (Linux)
-FROM rocker/rstudio:4.3.1
+# Base image: Match your renv.lock R version (change 4.3.1 to match your target R version)
+FROM rocker/rstudio:4.5.2
 
 RUN apt-get update && apt-get install -y \
     wget \
@@ -19,10 +19,17 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libblas-dev \
     liblapack-dev \
+    libmagick++-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libfreetype6-dev \
+    libpng-dev \
+    libtiff5-dev \
+    libjpeg-dev \
     muscle \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Set working directory for tools installation
 WORKDIR /opt/tools
 
 ##############################
@@ -50,25 +57,24 @@ RUN curl -L -O https://github.com/samtools/bcftools/releases/download/1.22/bcfto
     && rm -rf bcftools-1.22 bcftools-1.22.tar.bz2
 
 ##############################
-# Install R packages
+# Install R Packages via renv
 ##############################
-RUN R -e "install.packages(c('shiny','data.table','plotly','DT'), repos='https://cran.rstudio.com/')"
-RUN R -e "if (!requireNamespace('BiocManager', quietly=TRUE)) install.packages('BiocManager'); BiocManager::install(c('Rsamtools','Biostrings'))"
-# CRAN packages
-RUN R -e "install.packages(c('ggplot2','data.table','shiny','plotly','DT'), repos='https://cran.rstudio.com/')"
+WORKDIR /srv/shiny-server/myapp
 
-# Bioconductor packages
-RUN R -e "if (!requireNamespace('BiocManager', quietly=TRUE)) install.packages('BiocManager'); BiocManager::install(c('Biostrings','msa'))"
+# Copy renv files first to leverage Docker layer caching
+COPY renv.lock renv.lock
+COPY .Rprofile .Rprofile
+COPY renv/ renv/
 
-# Bio3D package
-RUN R -e "install.packages('bio3d', repos='https://cran.rstudio.com/')"
+# Bootstrap renv and restore exact package states from lockfile
+RUN R -e "install.packages('renv', repos = c(CRAN = 'https://cloud.r-project.org'))"
+RUN R -e "renv::restore(prompt = FALSE)"
 
-# r3dmol from CRAN
-RUN R -e "install.packages('r3dmol', repos='https://cran.rstudio.com/')"
+# Copy the rest of your application code (R/, data/, www/, result/, app.R)
+COPY . .
 
 # Expose RStudio and Shiny ports
 EXPOSE 8787 3838
 
-
-# Default command
+# Default command for rocker/rstudio images
 CMD ["/init"]

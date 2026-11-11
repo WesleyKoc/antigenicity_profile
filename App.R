@@ -500,7 +500,7 @@ server <- function(input, output) {
     )
     
     headers <- get_fasta_headers(path)
-    
+
     selectInput(
       inputId = "vaccine_strain",
       label = "Vaccine Strain to Compare",
@@ -509,15 +509,6 @@ server <- function(input, output) {
     )
   })
   
-  #TODO: Delete, dead code
-  chosen_subtype <- reactive(
-    if (input$vaxtype == "2") {
-      req(current_subtype())
-      current_subtype()
-    } else {
-      subtype()
-    }
-  )
   
   ## prediction ##
   
