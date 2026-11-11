@@ -1,12 +1,17 @@
 #TODO
 #Set up so user can input multiple seqs at a time + give ratio --> simulate real flu season
-#Use general rules (nothing too complex) to model how vaccine changes over time in patient
-# - So date of collection option shows how well a patient who received the vaccine x years ago would fare if encountered strain y in year z
-#Add the alignment to the printed report
+#Proposed rule:
+# - A-Z = strains
+# - P(A...Z) = proportion of strain in circulation
+# - n = number of strains
+# - sum(A...Z*P(A...Z))/n = estimated overall vaccine efficacy
 #Should use nextflow to optimise it
-#Should sort the list of amino acid differences based on epitope
 #There are codon insertions into H1 and H2 as discovered by Book, but all from Pakistan and Oman, so need to read into it, he'll send over the relevant paper
 #Also need to update the help-pages to fit the new functions
+
+#VIC = Influenza B Victoria Lineage
+#VIC antigenicity equation derivation paper: 10.1038/s41598-020-80895-w
+#H3N2 and H1N1 antigenicity equation derivation paper: 10.1371/journal.pone.0139958
 
 packages <- c("ggplot2","data.table","shiny","plotly","cli","shinycssloaders","DT","r3dmol","bio3d","Biostrings","pwalign","bslib","msaR","tidyverse","ggpubr","gridExtra","htmlwidgets","webshot2","magick")
 invisible(lapply(packages, library, character.only = TRUE))
@@ -166,7 +171,8 @@ ui <- fluidPage(
                          column(
                            width=12,
                            h4("Amino Acid Differences/Mismatches"),
-                           textOutput("mismatches")
+                           textOutput("mismatches"),
+                           verbatimTextOutput("mismatches_sorted")
                          )
                        ),
                        br(),
@@ -176,6 +182,14 @@ ui <- fluidPage(
                            msaROutput("alignment", height="500px", width = "100%")
                          )
                        ),
+                       fluidRow(
+                         column(
+                           width = 12,
+                           div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;",
+                               "Orange = epitope site A | Yellow = epitope site B | Green = epitope site C",
+                               tags$br(),
+                               "Blue = epitope site D | Purple = epitope site E"))
+                           ),
                        fluidRow(
                          column(
                            width = 10,
@@ -253,9 +267,11 @@ ui <- fluidPage(
                          brrep(4),
                          tags$p("The results page is divided into 4 sections:"),
                          tags$p("1.  Antigenicity Plot"),
-                         tags$p("2.  Mutant Epitope Molecular Visualisation Panel"),
-                         tags$p("3.  Mutant Epitope Plot"),
-                         tags$p("4.  User Input Statistic Summary"),
+                         tags$p("2.  Amino Acid Difference/Mismatch List"),
+                         tags$p("3.  Sequence Alignment Viewer"),
+                         tags$p("4.  Mutant Epitope Molecular Visualisation Panel"),
+                         tags$p("5.  Mutant Epitope Plot"),
+                         tags$p("6.  User Input Statistic Summary"),
                          brrep(4),
                          hr(style = "border-top: 2px solid #337ab7;"),
                          brrep(4),
@@ -266,6 +282,18 @@ ui <- fluidPage(
                          tags$p("In the plot, the red dotted line indicates the theoretically ideal level of performance your vaccine should perform at while each virus strain stored in the database is distributed across the X-axis by the collection date and season, and each virus' performance is indicated by the Y-axis."),
                          tags$p("The level of your red triangle indicates how well your selected vaccine was predicted to perform it against other viral strains across the years, so don't feel too disappointed if it's underperforming a bit in the model, most vaccines do anyway."),
                          tags$p("Hover over any of the points to see which specific influenza strain is being represented, as well as its collection date and the vaccine's predicted efficacy against said strain."),
+                         brrep(4),
+                         hr(style = "border-top: 2px solid #337ab7;"),
+                         brrep(4),
+                         tags$h4("Amino Acid Differences/Mismatches"),
+                         tags$img(src="app_images/aminoacidmismatch.png", width="100%", height="100%"),
+                         tags$p("This block first shows the full list of all sequential differences and mismatches (gaps included) between the protein sequences of the vaccine and the influenza strain's hemagglutinin. Immediately below is a list showing all the known mutations, except gaps, sorted into the five canonical epitopes, or none at all if their locations do not match any epitope's locations"),
+                         brrep(4),
+                         hr(style = "border-top: 2px solid #337ab7;"),
+                         brrep(4),
+                         tags$h4("Sequence Alignment Viewer"),
+                         tags$img(src="app_images/alignment.png", width="100%", height="100%"),
+                         tags$p("Here, the entire protein sequence alignment between the user-inputted influenza and vaccine strains are displayed, with the user-input influenza strain being the upper sequence, while the vaccine strain is the lower one. The msaR package used allows for many visual customisations, XXX"),
                          brrep(4),
                          hr(style = "border-top: 2px solid #337ab7;"),
                          brrep(4),
@@ -770,6 +798,7 @@ server <- function(input, output) {
       )
   })
   
+  
   output$plot_epitope_user <- renderPlotly({
     plot_epitope_user_object()
   })
@@ -857,8 +886,59 @@ server <- function(input, output) {
     paste0(vaccine[vaccine != user_input], vax_pos[vaccine != user_input], user_input[vaccine != user_input], collapse = ", ")
   })
   
+  mismatch_loc <- reactive ({
+    if (current_subtype() == "H1N1") {
+      A <- c(118,120,121,122,126,127,128,129,132,133,134,135,137,139,140,141,142,143,146,147,149,165,252,253) #Epitope Site A
+      B <- c(124,125,152,153,154,155,156,157,160,162,183,184,185,186,187,189,190,191,193,194,195,196) #Epitope Site B
+      C <- c(34,35,36,37,38,40,41,43,44,45,269,270,271,272,273,274,276,277,278,283,288,292,295,297,298,302,303,305,306,307,308,309,310) #Epitope Site C
+      D <- c(89,94,95,96,113,117,163,164,166,167,168,169,170,171,172,173,174,176,179,198,200,202,204,205,206,207,208,209,210,211,212,213,214,215,216,222,223,224,225,226,227,235,237,239,241,243,244,245) #Epitope Site C
+      E <- c(47,48,50,51,53,54,56,57,58,66,68,69,70,71,72,73,74,75,78,79,80,82,83,84,85,86,102,257,258,259,260,261,263,267) #Epitope Site E
+    } else if (current_subtype()  == "H3N2") {
+      A <- c(122,128,44,96,57,124,129,45,102,59,126,155,46,103,62,130,156,47,117,63,131,157,48,121,67)
+      B <- c(132,158,50,167,75,133,159,51,170,78,135,160,53,171,80,137,163,54,172,81,138,165,273,173,82)
+      C <- c(140,186,275,174,83,142,187,276,175,86,143,188,278,176,87,144,189,279,177,88,145,190,280,179,91)
+      D <- c(146,192,294,182,92,150,193,297,201,94,152,194,299,203,109,168,196,300,207,260,197,304,208,261)
+      E <- c(198,305,209,262,307,212,265,308,213,309,214,310,215,311,216,312,217,218,219,226,227,228,229,230,238,240,242,244,246,247,248)
+    } else {
+      A <- c(121,122,123,125,126,134,135,136,137,139,141,142,144,146,147,148,149,150,151,155,157,177)
+      B <- c(127,129,133,160,161,162,163,164,165,166,168,172,174,196,197,198,199,200,202,203,204,206,207,208,209)
+      C <- c(34,35,36,37,38,39,40,289,291,292,293,294,309,315,317,318,320,321,323,324,325,326,327)
+      D <- c(93,101,102,116,120,176,179,180,182,183,184,185,186,187,188,190,212,214,218,219,220,223,224,225,226,227,228,229,230,233,242,243,244,245,246,254,255,256,257,258)
+      E <- c(42,44,48,56,58,59,63,71,73,75,77,78,79,80,83,84,85,88,89,91,108,273,276,277,280)
+    }
+    aligned <- alignment_prep()
+    user_input <- strsplit(as.character(aligned[[1]]),"")[[1]]
+    vaccine <- strsplit(as.character(aligned[[2]]),"")[[1]]
+    vax_pos <- cumsum(vaccine != "-")
+    changes <- (vaccine != user_input) & (vaccine != "-") & (user_input != "-")
+    mismatch_posit <- vax_pos[changes]
+    vax_posaa <- vaccine[changes]
+    user_posaa <- user_input[changes]
+    epitopes <- sapply(mismatch_posit, function(p) {
+      if (p %in% A) return ("A")
+      if (p %in% B) return ("B")
+      if (p %in% C) return ("C")
+      if (p %in% D) return ("D")
+      if (p %in% E) return ("E")
+      return ("Other")
+    })
+    mutation_asStrings <- paste0(vax_posaa,mismatch_posit,user_posaa)
+    mutations_list <- list()
+    for (epitope in c("A","B","C","D","E","Other")) {
+      epitope_mutations <- mutation_asStrings[epitopes == epitope]
+      if (length(epitope_mutations) > 0) {
+        mutations_list <- c(mutations_list, paste0("Mutations at epitope ", epitope, ": ", paste(epitope_mutations, collapse = ", ")))
+      }
+    }
+    paste(mutations_list, collapse = "\n")
+  })
+  
   output$mismatches <- renderText({
     mismatches()
+  })
+  
+  output$mismatches_sorted <- renderText({
+    mismatch_loc()
   })
   
   output$mol_user <- renderR3dmol({
@@ -894,6 +974,25 @@ server <- function(input, output) {
       collapse = "\n"
     )
     
+    if (current_subtype() == "H1N1") {
+      A <- c(118,120,121,122,126,127,128,129,132,133,134,135,137,139,140,141,142,143,146,147,149,165,252,253) #Epitope Site A
+      B <- c(124,125,152,153,154,155,156,157,160,162,183,184,185,186,187,189,190,191,193,194,195,196) #Epitope Site B
+      C <- c(34,35,36,37,38,40,41,43,44,45,269,270,271,272,273,274,276,277,278,283,288,292,295,297,298,302,303,305,306,307,308,309,310) #Epitope Site C
+      D <- c(89,94,95,96,113,117,163,164,166,167,168,169,170,171,172,173,174,176,179,198,200,202,204,205,206,207,208,209,210,211,212,213,214,215,216,222,223,224,225,226,227,235,237,239,241,243,244,245) #Epitope Site C
+      E <- c(47,48,50,51,53,54,56,57,58,66,68,69,70,71,72,73,74,75,78,79,80,82,83,84,85,86,102,257,258,259,260,261,263,267) #Epitope Site E
+    } else if (current_subtype()  == "H3N2") {
+      A <- c(122,128,44,96,57,124,129,45,102,59,126,155,46,103,62,130,156,47,117,63,131,157,48,121,67)
+      B <- c(132,158,50,167,75,133,159,51,170,78,135,160,53,171,80,137,163,54,172,81,138,165,273,173,82)
+      C <- c(140,186,275,174,83,142,187,276,175,86,143,188,278,176,87,144,189,279,177,88,145,190,280,179,91)
+      D <- c(146,192,294,182,92,150,193,297,201,94,152,194,299,203,109,168,196,300,207,260,197,304,208,261)
+      E <- c(198,305,209,262,307,212,265,308,213,309,214,310,215,311,216,312,217,218,219,226,227,228,229,230,238,240,242,244,246,247,248)
+    } else {
+      A <- c(121,122,123,125,126,134,135,136,137,139,141,142,144,146,147,148,149,150,151,155,157,177)
+      B <- c(127,129,133,160,161,162,163,164,165,166,168,172,174,196,197,198,199,200,202,203,204,206,207,208,209)
+      C <- c(34,35,36,37,38,39,40,289,291,292,293,294,309,315,317,318,320,321,323,324,325,326,327)
+      D <- c(93,101,102,116,120,176,179,180,182,183,184,185,186,187,188,190,212,214,218,219,220,223,224,225,226,227,228,229,230,233,242,243,244,245,246,254,255,256,257,258)
+      E <- c(42,44,48,56,58,59,63,71,73,75,77,78,79,80,83,84,85,88,89,91,108,273,276,277,280)
+    }
 
     r3dmol() %>%
       m_add_model(data = pdb_text, format = "pdb") %>% 
@@ -902,11 +1001,11 @@ server <- function(input, output) {
       m_zoom_to() %>%
       m_set_style(sel = m_sel(chain="A", resi = mutantpos),
                   style = m_style_sphere(color = "red",radius = 1)) %>%
-      m_set_style(sel = m_sel(resi = c(130:140, 145:150)),style = m_style_cartoon(color = "orange")) %>% #Epitope Site A
-      m_set_style(sel = m_sel(resi = c(155:160, 186:199)),style = m_style_cartoon(color = "yellow")) %>% #Epitope Site B
-      m_set_style(sel = m_sel(resi = 280:300), style = m_style_cartoon(color = "green")) %>% #Epitope Site C
-      m_set_style(sel = m_sel(resi = 245:255), style = m_style_cartoon(color = "blue")) %>% #Epitope Site C
-      m_set_style(sel = m_sel(resi = c(62:63, 75:82, 85:100)),style = m_style_cartoon(color = "purple")) %>% #Epitope Site E
+      m_set_style(sel = m_sel(resi = A),style = m_style_cartoon(color = "orange")) %>% #Epitope Site A
+      m_set_style(sel = m_sel(resi = B),style = m_style_cartoon(color = "yellow")) %>% #Epitope Site B
+      m_set_style(sel = m_sel(resi = C), style = m_style_cartoon(color = "green")) %>% #Epitope Site C
+      m_set_style(sel = m_sel(resi = D), style = m_style_cartoon(color = "blue")) %>% #Epitope Site C
+      m_set_style(sel = m_sel(resi = E),style = m_style_cartoon(color = "purple")) %>% #Epitope Site E
       m_add_res_labels(
         m_sel(
           resi = mutantpos,
@@ -1156,11 +1255,12 @@ server <- function(input, output) {
         max_score = "0.68 (68%)"
       }
       vax_label <- if (identical(input$vaxtype, "1")) input$vax_fastafiles$name else input$vaccine_strain
-      demo_report_user_text <- paste0("Vaccine efficacy of ",clicked_strain_user(),
+      demo_report_user_raw <- paste0("Vaccine efficacy of ",clicked_strain_user(),
                   " compared with ", vax_label," strain is reduced by ",result," percent
-           \nNote: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score,".\n\nAmino Acid Differences/Mismatches: ",stringr::str_wrap(mismatches()))
-      text_page <- magick::image_blank(width = 702, height = 496, color = "white")
-      text_page <- magick::image_annotate(text_page, demo_report_user_text)
+           \nNote: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score,".\n\nAmino Acid Differences/Mismatches: ",mismatches(), ".\n\nSorted Amino Acid Differences/Mismatches by Epitope:\n",mismatch_loc())
+      demo_report_user_text <- paste(sapply(strsplit(demo_report_user_raw, "\n")[[1]], function(line) stringr::str_wrap(line, width=80)), collapse="\n")
+      text_page <- magick::image_blank(width = 800, height = 1200, color = "white")
+      text_page <- magick::image_annotate(text_page, demo_report_user_text, size=14, font="Courier", gravity="northwest", location="+40+40")
       aligned <- alignment_prep()
       align1 <- strsplit(as.character(aligned[[1]]),"")[[1]]
       align2 <- strsplit(as.character(aligned[[2]]),"")[[1]]
@@ -1182,23 +1282,27 @@ server <- function(input, output) {
         end1 <- if (len1 > 0) position1 + len1 -1 else position1
         start2 <-position2
         end2 <- if (len2 > 0) position2 + len2 -1 else position2
-        if (len1 > 0) position1 <- len1 +1
-        if (len2 > 0) position2 <- len2 +1
-        symbols <- ifelse(c1 == c2 & c1!="-", "|", ifelse(c1 == "-", " ", "+"))
-        query_line <-sprintf("Query %-4d %s %d", start1, paste(c1, collapse=""), end1)
-        match_line <-sprintf("            %s", paste(symbols, collapse=""))
-        subject_line <-sprintf("Sbjct %-4d %s %d", start2, paste(c2, collapse=""), end2)
-        align_result <- c(results, query_line, match_line, subject_line)
+        if (len1 > 0) position1 <- end1 + 1
+        if (len2 > 0) position2 <- end2 +1
+        symbols <- ifelse(c1 == "-" | c2 == "-", " ", ifelse(c1 == c2, "|", "+"))
+        query_line <-sprintf("Query   %-4d %s %d", start1, paste(c1, collapse=""), end1)
+        match_line <-sprintf("             %s", paste(symbols, collapse=""))
+        subject_line <-sprintf("Subject %-4d %s %d", start2, paste(c2, collapse=""), end2)
+        results <- c(results, query_line, match_line, subject_line, "")
       }
-      alignment_text <-paste0(header, paste(align_result, collapse="\n"))
+      alignment_text <-paste0(header, paste(results, collapse="\n"))
       alignment_page <-magick::image_blank(width = 800, height = 1200, color = "white")
-      alignment_page <- magick::image_annotate(alignment_page, alignment_text, size=14)
+      alignment_page <- magick::image_annotate(alignment_page, alignment_text, size=14, font="Courier", gravity="northwest", location="+40+40")
       antigenicityplot_path <- tempfile(fileext = ".png")
       epitopeplot_path <- tempfile(fileext = ".png")
       ggplot2::ggsave(filename=antigenicityplot_path, plot=plot_antigenicity_user_object()$raw, width=11.7, height=8.3,dpi=300)
-      plotly::save_image(plot_epitope_user_object(), epitopeplot_path, width = 351, height = 248)
-      combined_images <- magick::image_read(c(antigenicityplot_path, epitopeplot_path))
-      all_pages <- c(text_page, alignment_page, combined_images)
+      plotly::save_image(plot_epitope_user_object(), epitopeplot_path, width = 351, height = 248, scale = 2, format="png")
+      merged_plot_page <- magick::image_blank(width = 800, height = 1200, color = "white")
+      antigen_plot_image <- magick::image_resize(magick::image_read(antigenicityplot_path), "800x600") 
+      epitope_plot_image <- magick::image_resize(magick::image_read(epitopeplot_path), "800x600")
+      merged_plot_page <- magick::image_composite(merged_plot_page, antigen_plot_image, gravity="northwest")
+      merged_plot_page <- magick::image_composite(merged_plot_page, epitope_plot_image, gravity="northwest", offset = "+0+600")
+      all_pages <- c(text_page, alignment_page, merged_plot_page)
       magick::image_write(all_pages, path = file, format = "pdf")
     },
     contentType = "application/pdf"
