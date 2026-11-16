@@ -1,0 +1,30 @@
+---
+title: "H1N1&H3N2notes"
+output: html_document
+---
+
+#H1N1 Site Contents Vary by Strain and Study
+The five H1 sites are Sa, Sb, Ca1, Ca2, and Cb, and their residue counts differ between the classical PR8 map and pandemic strains.
+For instance in a comparison study between 2009 pandemic and eurasian avian-like strains, the sites were of sizes 13, 12, 11, 8, and 5 residues respectively.
+Site differences between the two strains were at 4 (Sa), 6 (Sb), 6 (Ca1), 4 (Ca2), and 2 (Cb).
+A single H128N substitution in Sa was sufficient to cause a four-fold HI change and measurable antigenic drift
+
+Some papers don't uniformly cover all sites
+Eg. Pandemic H1N1 paper escape-mutant sequencing covered only Sa, Sb, Ca2, and added a new site called Pa
+Assignments:
+Sa: 141, 142, 143, 171, 172, 174, 177, 180
+Sb: 170, 173, 202, 206, 210, 211, 212
+Ca2: 51, 154, 156, 157, 158, 159, 200, 238
+Pa: 147
+
+
+#H3N2 sites
+These were assembled using monoclonal antibody competition and escape mutant selection instead of a fixed residue roster
+
+#Why Yean's numbers are strange
+The papers used don't report the same thing.
+Gupta et al. and Pan & Deem defined these epitope regions for general use. This was specially used for computing antigenic distance.
+These regions were deliberately enlarged and mapped onto a model strain.
+Conversely the classical A-E ranges were structures defined on the H3 model.
+We guessed right: the discontinuity was due to those sites being clusters of surface-exposed residues, exposed by the protein folding.
+Overall the fraction of substitutions in the epitope dominating the mutations calculate well for antigenic distance and vaccine efficacy estimations; correlation weakens when the whole hemagglutinin is used

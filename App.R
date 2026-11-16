@@ -1,13 +1,19 @@
 #TODO
-#Set up so user can input multiple seqs at a time + give ratio --> simulate real flu season
-#Proposed rule:
-# - A-Z = strains
-# - P(A...Z) = proportion of strain in circulation
-# - n = number of strains
-# - sum(A...Z*P(A...Z))/n = estimated overall vaccine efficacy
-#Should use nextflow to optimise it
-#There are codon insertions into H1 and H2 as discovered by Book, but all from Pakistan and Oman, so need to read into it, he'll send over the relevant paper
-#Also need to update the help-pages to fit the new functions
+#Change the molecular model interface so that it gives user the option to have:
+#  1.	All grey
+#  2.	All epitopes highlighted
+#  3.	Toggle epitope highlighting based on interactive epitope plot selection
+
+#Epitope locations weird
+#Why is it so disconnected? Instead of having linear ranges they are split along very short lengths?
+#Why are the epitopes so massive? --> to fix this, set the m_sel in highmode == "2" to also contain the chain="A" argument before resi="" argument
+#Why does the same epitope range appear on parts of the model that aren’t on the contacting end of the protein?
+#Probably the protein worked like a dimer: prior to host interaction, perhaps like Dengue, HA units interacted together so they can form the entire viral molecule? In case of epitope A, the current ranges set them on opposite ends of the “dumbbell-like” structure, perhaps these are the surfaces for dimer interactions?
+#Look through the numbers provided by Yeen, need to dig into this
+#Theoretically, if there’s a mutation outside of the contacting end, unless the mutation messes up the contacting end by severe structural disruption, antigenicity should have little issue
+#Unless we have real data on which specific amino acids are directly involved in contacting the antigen/antibody, we don’t have any way to automate on the molecular display if the mismatch is on a contacting surface or the structure
+
+#Nextflow can be taken slowly, not many bits can be taken out
 
 #VIC = Influenza B Victoria Lineage
 #VIC antigenicity equation derivation paper: 10.1038/s41598-020-80895-w
@@ -31,8 +37,8 @@ ui <- fluidPage(
   
   titlePanel(
     div(p("FluWatch ☢️ \n", tags$em('@TropMed')),
-      tags$style(HTML("body{margin-top: 50px;}")),
-      style = "min-height: 120px; display: flex; justify-content: center;
+        tags$style(HTML("body{margin-top: 50px;}")),
+        style = "min-height: 120px; display: flex; justify-content: center;
       align-items: center; width: 100%; font-family: 'Times New Roman'; font-size: 3.5vw")),
   
   # Main panel content first
@@ -41,16 +47,16 @@ ui <- fluidPage(
                        tags$style(HTML("body {margin-right: 150px;margin-left: 150px;margin-bottom: 150px;}")),
                        br(),
                        fluidRow(tags$p("Welcome to FluWatch! A tool for testing if your influenza virus strain works with current vaccine strains in circulation!"),
-                         tags$a(href="https://www.youtube.com/watch?v=9XDaVNsC_4g", "Click here for a youtube demo of the app!")),
+                                tags$a(href="https://www.youtube.com/watch?v=9XDaVNsC_4g", "Click here for a youtube demo of the app!")),
                        fluidRow(
                          column(
                            width = 12,
                            br(),
                            div(id="demo_report_section",
-                             div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", textOutput("demo_report")),
-                             )
+                               div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", textOutput("demo_report")),
                            )
-                         ),
+                         )
+                       ),
                        br(),
                        fluidRow(
                          column(
@@ -60,30 +66,30 @@ ui <- fluidPage(
                        hr(),
                        fluidRow(
                          column(width = 10,offset=1,
-                           div(id="demo_protein_model_section",
-                               #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
-                               selectInput(inputId = "protein_file",
-                                           label = "Choose Protein Model to Visualise Hemagglutinin Mutations On:",
-                                           list("2009 H1N1 influenza virus" = "3LZG",
-                                                "H3N2 A/Hong Kong/1/1968 influenza virus hemagglutinin" = "6CEX",
-                                                "H5N1 influenza virus" = "2FK0",
-                                                "H5N1 A/goose/Guangdong/1/96" = "4MHI",
-                                                "H5N1 hemagglutinin mutant (N158D, N224K and Q226L) A/Viet Nam/1203/2004"="4N5Y",
-                                                "H10N8 A/Jiangxi-Donghu/346/2013"="4WSX",
-                                                "H17N10 A/little yellow-shouldered bat/Guatemala/060/2010"="4H32",
-                                                "H1N1 A/South Carolina/1/1918"="4JUG",
-                                                "H5N1 A/duck/Laos/3295/2006(H5N1)"="4JUL",
-                                                "H7N9 A/Hong Kong/61/2016"="6D7C"),
-                                           width = 999),
-                               r3dmolOutput("mol", height = "500px"),
-                               br(),
-                               plotlyOutput("plot_epitope", height = "300px", width = "100%")
-                               )
-                           )
-                         ),
-                      hr(),
-                      br(),
-                      fluidRow(column(width = 12,dataTableOutput("segment_summary")))),
+                                div(id="demo_protein_model_section",
+                                    #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
+                                    selectInput(inputId = "protein_file",
+                                                label = "Choose Protein Model to Visualise Hemagglutinin Mutations On:",
+                                                list("2009 H1N1 influenza virus" = "3LZG",
+                                                     "H3N2 A/Hong Kong/1/1968 influenza virus hemagglutinin" = "6CEX",
+                                                     "H5N1 influenza virus" = "2FK0",
+                                                     "H5N1 A/goose/Guangdong/1/96" = "4MHI",
+                                                     "H5N1 hemagglutinin mutant (N158D, N224K and Q226L) A/Viet Nam/1203/2004"="4N5Y",
+                                                     "H10N8 A/Jiangxi-Donghu/346/2013"="4WSX",
+                                                     "H17N10 A/little yellow-shouldered bat/Guatemala/060/2010"="4H32",
+                                                     "H1N1 A/South Carolina/1/1918"="4JUG",
+                                                     "H5N1 A/duck/Laos/3295/2006(H5N1)"="4JUL",
+                                                     "H7N9 A/Hong Kong/61/2016"="6D7C"),
+                                                width = 999),
+                                    r3dmolOutput("mol", height = "500px"),
+                                    br(),
+                                    plotlyOutput("plot_epitope", height = "300px", width = "100%")
+                                )
+                         )
+                       ),
+                       hr(),
+                       br(),
+                       fluidRow(column(width = 12,dataTableOutput("segment_summary")))),
               tabPanel("User's analysis",
                        tags$style(HTML("body {margin-right: 150px;margin-left: 150px;}.radio label {white-space: nowrap;}")),
                        br(),
@@ -92,7 +98,7 @@ ui <- fluidPage(
                            width = 5,
                            br(),
                            radioButtons( inputId = "radio", label = "Analysis Type", 
-                             choices = list( "Genome Assembly with Antigenicity Prediction" = 1, "Antigenicity Prediction Only" = 2),
+                                         choices = list( "Genome Assembly with Antigenicity Prediction" = 1, "Antigenicity Prediction Only" = 2),
                            )
                          ),
                          column(
@@ -100,7 +106,7 @@ ui <- fluidPage(
                            conditionalPanel(
                              condition = "input.radio == 1",
                              fileInput("fastq_files", "Upload FASTQ File", multiple = FALSE,
-                               accept = c(".fastq",".fastq.gz", ".fq",".fq.gz","application/gzip","application/x-gzip"))
+                                       accept = c(".fastq",".fastq.gz", ".fq",".fq.gz","application/gzip","application/x-gzip"))
                            ),
                            conditionalPanel(
                              condition = "input.radio == 2",
@@ -122,19 +128,19 @@ ui <- fluidPage(
                          column(
                            width = 5,
                            conditionalPanel(condition = 'input.vaxtype == 2',
-                           radioButtons( 
-                             inputId = "subtype_choice", 
-                             label = "Vaccine Type", 
-                             choices = list( 
-                               "H1N1" = "H1N1", 
-                               "VIC" = "VIC",
-                               "H3N2" = "H3N2"
-                             ),
-                           )
+                                            radioButtons( 
+                                              inputId = "subtype_choice", 
+                                              label = "Vaccine Type", 
+                                              choices = list( 
+                                                "H1N1" = "H1N1", 
+                                                "VIC" = "VIC",
+                                                "H3N2" = "H3N2"
+                                              ),
+                                            )
                            ),
                            conditionalPanel(condition = "input.vaxtype == 1",
                                             fileInput("vax_fastafiles", "Upload FASTA File", multiple = FALSE,
-                                              accept = c(".fasta",".fasta.gz", ".fa",".fa.gz")),
+                                                      accept = c(".fasta",".fasta.gz", ".fa",".fa.gz")),
                                             radioButtons(inputId = "uploaded_subtype", label="What's your sample's subtype?",
                                                          choices = list("H1N1" = "H1N1", "VIC"="VIC", "H3N2"="H3N2")))
                          ),
@@ -189,7 +195,19 @@ ui <- fluidPage(
                                "Orange = epitope site A | Yellow = epitope site B | Green = epitope site C",
                                tags$br(),
                                "Blue = epitope site D | Purple = epitope site E"))
-                           ),
+                       ),
+                       br(),
+                       fluidRow(
+                         column(
+                           width=12,
+                           radioButtons(inputId = "highlighter",label="3D Model Highlighting Mode", 
+                                        choices = c("No epitope highlighting" = "1",
+                                                    "All epitopes highlighted" = "2",
+                                                    "Selective Highlighting (click on bar chart to choose)" = "3"),
+                                        selected = "2",
+                                        inline = TRUE)
+                         )
+                       ),
                        fluidRow(
                          column(
                            width = 10,
@@ -216,7 +234,7 @@ ui <- fluidPage(
                            downloadButton("export", "Export your report as PDF", class = NULL)
                          )
                        )
-                       ),
+              ),
               tabPanel("Help (Eng)",
                        tags$style(HTML(
                          "body {
@@ -307,8 +325,8 @@ ui <- fluidPage(
                          tags$h4("Mutant Epitope Plot"),
                          tags$img(src="app_images/userepitopeplot.png", width="100%", height="100%"),
                          tags$p("This panel shows the distribution of the total mutations found in your virus strain across the 5 canonical epitopes A through E. It's just a basic bar chart showing how many mutations are at each epitope. The more mutations you have, the greater the reduction in vaccine efficacy due to divergence from conditions supporting antigenicity"),
-                         )
-                       ),
+                       )
+              ),
               tabPanel("Help (Thai)",
                        tags$style(HTML(
                          "body {
@@ -385,11 +403,12 @@ ui <- fluidPage(
                          tags$p("แผนภาพนี้แสดงการกระจายตัวของการกลายพันธุ์ทั้งหมดที่พบในสายพันธุ์ไวรัสของคุณ โดยแบ่งตามตำแหน่งเอพิโทป (epitope) หลัก 5 ตำแหน่ง คือ A ถึง E ซึ่งนำเสนอในรูปแบบแผนภูมิแท่งพื้นฐานที่แสดงจำนวนการกลายพันธุ์ในแต่ละเอพิโทป ยิ่งมีการกลายพันธุ์มากเท่าใด ประสิทธิภาพของวัคซีนก็จะยิ่งลดลงมากขึ้นเท่านั้น เนื่องจากไวรัสมีการเปลี่ยนแปลงไปจากสภาวะที่เอื้อต่อการจดจำของภูมิคุ้มกัน (antigenicity)"),
                        )
               )
-              )
+  )
 )
 
 # Define server logic ----
 server <- function(input, output) {
+  
   
   current_subtype <- reactive({
     if (identical(input$vaxtype, "1")) input$uploaded_subtype else input$subtype_choice
@@ -398,19 +417,20 @@ server <- function(input, output) {
   ## execute code
   result_ready <- reactiveVal(FALSE)
   observeEvent(input$run_pipeline, {
+    unlink("result/consensus/draft_segment_4.fasta")
     
     #Assembly+antigenicity
     if (input$radio == "1") {
-    req(!is.null(input$fastq_files))
-    input_path <- input$fastq_files$datapath
-    req(length(input_path) == 1, !is.na(input_path), nzchar(input_path))
-    req(file.exists(input_path))
-    message("Shiny is launching assembly + antigenicity pipeline with: ", input_path)
-    status <- system2("conda",args = c("run", "--no-capture-output", "-n", "antigenicity_profile","bash", "Flu_assembler.sh", shQuote(input_path)))
-    if (status != 0) {
-      showNotification("Assembly pipeline failed; inspect the R console.", type = "error")
-      return()
-    }
+      req(!is.null(input$fastq_files))
+      input_path <- input$fastq_files$datapath
+      req(length(input_path) == 1, !is.na(input_path), nzchar(input_path))
+      req(file.exists(input_path))
+      message("Shiny is launching assembly + antigenicity pipeline with: ", input_path)
+      status <- system2("conda",args = c("run", "--no-capture-output", "-n", "antigenicity_profile","bash", "Flu_assembler.sh", shQuote(input_path)))
+      if (status != 0) {
+        showNotification("Assembly pipeline failed; inspect the R console.", type = "error")
+        return()
+      }
     }
     
     #Antigenicity only
@@ -459,7 +479,7 @@ server <- function(input, output) {
     
     result_ready(TRUE)
   }, ignoreInit = TRUE)
-
+  
   ## check subtypes ##
   subtype <- reactive({
     
@@ -478,11 +498,11 @@ server <- function(input, output) {
     
     max_score <- which.max(score_vec)
     if (max_score == 1) {
-        type <- "H1N1"      
+      type <- "H1N1"      
     } else if (max_score == 2){
-        type <- "VIC"
+      type <- "VIC"
     } else{
-        type <- "H3N2"
+      type <- "H3N2"
     }
     
     type
@@ -500,7 +520,7 @@ server <- function(input, output) {
     )
     
     headers <- get_fasta_headers(path)
-
+    
     selectInput(
       inputId = "vaccine_strain",
       label = "Vaccine Strain to Compare",
@@ -521,16 +541,16 @@ server <- function(input, output) {
     type <- current_subtype()
     
     sample_AA <- translate_AA(readDNAStringSet("result/consensus/draft_segment_4.fasta"))
-  
+    
     # Target
     if (identical(input$vaxtype, "1")) {
       req(input$vax_fastafiles)
       vaccine_strain <- readAAStringSet(input$vax_fastafiles$datapath) [1]
     }else {
-    vax_id <- input$vaccine_strain
-    vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",type,".fasta"))
-    vax_id_clean <- sub("^>", "", vax_id)
-    vaccine_strain <- vacx[vax_id_clean]
+      vax_id <- input$vaccine_strain
+      vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",type,".fasta"))
+      vax_id_clean <- sub("^>", "", vax_id)
+      vaccine_strain <- vacx[vax_id_clean]
     }
     names(vaccine_strain) <- "reference"
     
@@ -584,49 +604,49 @@ server <- function(input, output) {
     Ve <- c()
     
     for (k in colnames(aln_df)) {
+      
+      aln_tmp <- aln_filtered[unlist(epitope),c(k,"reference")]
+      score <- ifelse(aln_tmp[,1] == aln_tmp[,2],0,1) 
+      epi_idx <- aln_tmp[score == 1,] |> rownames() |> as.numeric()
+      
+      ###
+      idx_sub <- epitope
+      for (g in names(epitope)) {
+        idx_sub[[g]] <- intersect(idx_sub[[g]],epi_idx)
+      }
+      
+      datEpi <- sapply(idx_sub, length) |> as.data.frame()
+      colnames(datEpi) <- "mutations"
+      datEpi$epitopes <- rownames(datEpi)
+      
+      count_epitope_l[[cnt_]] <- datEpi
+      epitope_idx_l[[cnt_]] <- idx_sub
+      
+      
+      ##############################################################################
+      # The simple linear model for antigenicity prediction
+      # You might want to refine model later
+      ##############################################################################
+      mostdiverge_epitope <- names(which.max(sapply(idx_sub, length)))
+      Pepitope <- sum(score)/length(epitope[[mostdiverge_epitope]])    
+      if (type == "H1N1") {
+        E <- -1.19*Pepitope+0.53
         
-        aln_tmp <- aln_filtered[unlist(epitope),c(k,"reference")]
-        score <- ifelse(aln_tmp[,1] == aln_tmp[,2],0,1) 
-        epi_idx <- aln_tmp[score == 1,] |> rownames() |> as.numeric()
-
-        ###
-        idx_sub <- epitope
-        for (g in names(epitope)) {
-          idx_sub[[g]] <- intersect(idx_sub[[g]],epi_idx)
-        }
+      }  else if(type == "H3N2"){
+        E <- -2.47*Pepitope+0.47
         
-        datEpi <- sapply(idx_sub, length) |> as.data.frame()
-        colnames(datEpi) <- "mutations"
-        datEpi$epitopes <- rownames(datEpi)
+      } else if(type == "VIC"){
+        E <- -0.86*Pepitope+0.68
         
-        count_epitope_l[[cnt_]] <- datEpi
-        epitope_idx_l[[cnt_]] <- idx_sub
-        
-        
-        ##############################################################################
-        # The simple linear model for antigenicity prediction
-        # You might want to refine model later
-        ##############################################################################
-        mostdiverge_epitope <- names(which.max(sapply(idx_sub, length)))
-        Pepitope <- sum(score)/length(epitope[[mostdiverge_epitope]])    
-        if (type == "H1N1") {
-          E <- -1.19*Pepitope+0.53
-
-        }  else if(type == "H3N2"){
-          E <- -2.47*Pepitope+0.47
-          
-        } else if(type == "VIC"){
-          E <- -0.86*Pepitope+0.68
-          
-        }
-        
-        Ve <- c(Ve,E)
-        cnt_ <- cnt_ + 1
-
+      }
+      
+      Ve <- c(Ve,E)
+      cnt_ <- cnt_ + 1
+      
     }
     
     
-  
+    
     list_name <- strsplit(colnames(aln_df),"\\|")
     idx <- 1
     
@@ -654,13 +674,13 @@ server <- function(input, output) {
           
         }
       }
-
+      
       idx <- idx + 1
     }
-
+    
     
     df_final <- data.frame(date=normalize_date(vec_date),E=Ve[vec_idx],type=paste0(vec_id,"|",vec_clade))
-
+    
     count_epitope_filtered <- count_epitope_l[vec_idx]
     names(count_epitope_filtered) <- paste0(vec_id,"|",vec_clade)
     
@@ -712,7 +732,7 @@ server <- function(input, output) {
     }
     vax_label <- if (identical(input$vaxtype, "1")) input$vax_fastafiles$name else input$vaccine_strain
     HTML(paste0("Vaccine efficacy of ",clicked_strain_user(),
-           " compared with ", vax_label," strain is reduced by ",result," percent
+                " compared with ", vax_label," strain is reduced by ",result," percent
            <br>Note: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score))
   })
   
@@ -745,7 +765,7 @@ server <- function(input, output) {
       theme_minimal()+
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
             plot.title = element_text(hjust = 0.5))
-    ggplotly(p, tooltip = "text",source = "A_user") |>
+    interactive_plot <- ggplotly(p, tooltip = "text",source = "A_user") |>
       layout(
         legend = list(
           orientation = "v",   # vertical legend
@@ -758,7 +778,7 @@ server <- function(input, output) {
           borderwidth = 1
         )
       )
-    list(interactive = ggplotly(p, tooltip = "text", source="A_user"), raw=p)
+    list(interactive = interactive_plot, raw=p)
   })
   
   output$plot_antigencity_user <- renderPlotly({
@@ -772,9 +792,9 @@ server <- function(input, output) {
     print(dx)
     # Plot
     plot_ly(
-      x = dx$epitopes,
-      y = dx$mutations,
-      customdata = dx$epitopes,
+      x = as.character(dx$epitopes),
+      y = as.numeric(dx$mutations),
+      customdata = as.character(dx$epitopes),
       type = 'bar',
       marker = list(color = '#4C78A8'),
       source = "B_user"
@@ -798,6 +818,7 @@ server <- function(input, output) {
   #Set up pairwise alignment logic
   
   alignment_prep <- reactive({
+    req(result_ready())
     
     if (identical(input$vaxtype, "1")) req(input$vax_fastafiles) else req(input$vaccine_strain)
     
@@ -813,12 +834,12 @@ server <- function(input, output) {
     if (identical(input$vaxtype, "1")){
       reference_AA <- readAAStringSet(input$vax_fastafiles$datapath) [1]
     } else {
-    req(file.exists(file.path("data/02_vaccine_strain",paste0(current_subtype(), ".fasta"))))
-    vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",current_subtype(),".fasta"))
-    vax_ids <-sub(">","",input$vaccine_strain)
-    idx <- match(vax_ids, names(vacx))
-    validate(need(!is.na(idx), paste("Selected vaccine strain (", vax_ids, ") not found")))
-    reference_AA <- vacx[idx]
+      req(file.exists(file.path("data/02_vaccine_strain",paste0(current_subtype(), ".fasta"))))
+      vacx <- readAAStringSet(paste0("data/02_vaccine_strain/",current_subtype(),".fasta"))
+      vax_ids <-sub(">","",input$vaccine_strain)
+      idx <- match(vax_ids, names(vacx))
+      validate(need(!is.na(idx), paste("Selected vaccine strain (", vax_ids, ") not found")))
+      reference_AA <- vacx[idx]
     }
     names(reference_AA) <- "reference"
     
@@ -842,6 +863,14 @@ server <- function(input, output) {
     aligndpair
     
   })
+  
+  observeEvent(
+    list(input$fastq_files, input$fasta_files, input$vax_fastafiles,
+         input$vaccine_strain, input$radio, input$vaxtype,
+         input$uploaded_subtype, input$subtype_choice),
+    result_ready(FALSE),
+    ignoreInit = TRUE
+  )
   
   #cir_strain = user-selected circulating strain sequence
   #vaccine_strain = user-selected vaccine strain
@@ -934,14 +963,20 @@ server <- function(input, output) {
   
   output$mol_user <- renderR3dmol({
     
-    req(result_ready()) 
-
+    req(result_ready())
+    highmode <- input$highlighter
+    if (is.null(highmode)) highmode <- "1"
+    
     #type <- subtype()
     epitope <- clicked_epitope_user()
     
     #gather the locations of mutations
     epitope_ranges <- switch(current_subtype(), "H1N1" = H1N1_idx, "H3N2" = H3N2_idx, "VIC" = VIC_idx)
-    mutantpos <- intersect(mismatch_pos(), epitope_ranges[[epitope]])
+    if (highmode == "1" || highmode == "2") {
+      mutantpos <- mismatch_pos()
+    } else {
+      mutantpos <- intersect(mismatch_pos(), epitope_ranges[[epitope]]) 
+    }
     strain <- clicked_strain_user()
     
     idx <- pred()$epi[strain][[1]]
@@ -984,29 +1019,42 @@ server <- function(input, output) {
       D <- c(93,101,102,116,120,176,179,180,182,183,184,185,186,187,188,190,212,214,218,219,220,223,224,225,226,227,228,229,230,233,242,243,244,245,246,254,255,256,257,258)
       E <- c(42,44,48,56,58,59,63,71,73,75,77,78,79,80,83,84,85,88,89,91,108,273,276,277,280)
     }
-
-    r3dmol() %>%
+    
+    viewer <- r3dmol() %>%
       m_add_model(data = pdb_text, format = "pdb") %>% 
       m_set_style(sel = m_sel(chain = c("A","B","C","D","E","F")),
                   style = m_style_cartoon(color = "lightgray")) %>%
-      m_zoom_to() %>%
-      m_set_style(sel = m_sel(chain="A", resi = mutantpos),
-                  style = m_style_sphere(color = "red",radius = 1)) %>%
-      m_set_style(sel = m_sel(resi = A),style = m_style_cartoon(color = "orange")) %>% #Epitope Site A
-      m_set_style(sel = m_sel(resi = B),style = m_style_cartoon(color = "yellow")) %>% #Epitope Site B
-      m_set_style(sel = m_sel(resi = C), style = m_style_cartoon(color = "green")) %>% #Epitope Site C
-      m_set_style(sel = m_sel(resi = D), style = m_style_cartoon(color = "blue")) %>% #Epitope Site C
-      m_set_style(sel = m_sel(resi = E),style = m_style_cartoon(color = "purple")) %>% #Epitope Site E
-      m_add_res_labels(
-        m_sel(
-          resi = mutantpos,
-          chain = "A"
-        ),
-        style = m_style_label(inFront = T,font = list(size = 6),
-                              backgroundOpacity = 0.7,
-                              fontColor = "white",showBackground = T,
-                              alignment = "bottomRight")
-      ) 
+      m_zoom_to()
+    
+    if (highmode == "2") {
+      viewer <- viewer %>%
+        m_set_style(sel = m_sel(chain="A", resi = mutantpos),
+                    style = m_style_sphere(color = "red",radius = 1)) %>%
+        m_set_style(sel = m_sel(resi = A),style = m_style_cartoon(color = "orange")) %>% #Epitope Site A
+        m_set_style(sel = m_sel(resi = B),style = m_style_cartoon(color = "yellow")) %>% #Epitope Site B
+        m_set_style(sel = m_sel(resi = C), style = m_style_cartoon(color = "green")) %>% #Epitope Site C
+        m_set_style(sel = m_sel(resi = D), style = m_style_cartoon(color = "blue")) %>% #Epitope Site C
+        m_set_style(sel = m_sel(resi = E),style = m_style_cartoon(color = "purple")) #Epitope Site E
+    } else if (highmode == "3") {
+      highlight_map <- c("A"="orange", "B"="yellow","C"="green", "D"="blue","E"="purple")
+      selected_epi <- switch(epitope, "A"=A, "B"=B, "C"=C, "D"=D, "E"=E)
+      viewer <- viewer %>%
+        m_set_style(sel=m_sel(resi = selected_epi,chain = "A"), style=m_style_cartoon(color=unname(highlight_map[epitope])))
+    }
+    
+    if (length(mutantpos) > 0) {
+      viewer <- viewer%>%
+        m_set_style(sel = m_sel(chain="A", resi = mutantpos),style=m_style_sphere(color="red", radius=1))%>%
+        m_add_res_labels(
+          m_sel(resi = mutantpos,chain = "A"),
+          style = m_style_label(inFront = T,font = list(size = 6),
+                                backgroundOpacity = 0.7,
+                                fontColor = "white",showBackground = T,
+                                alignment = "bottomRight")
+        )
+    }
+    
+    viewer
     
   })
   
@@ -1050,7 +1098,7 @@ server <- function(input, output) {
               ))
     
   })
-
+  
   
   
   clicked_strain <- reactive({
@@ -1090,44 +1138,44 @@ server <- function(input, output) {
   
   output$plot_antigencity <- renderPlotly({
     
-      demo_df <- fread("data/03_tmp/demo_antigenicty.tsv")
-      demo_df$group <- ifelse(demo_df$type == "Demo_sample","Demo samples","Circulating strains from GISAID database")
-      p <- demo_df |> ggplot(aes(date,E,
-                                 color=group,shape=group,
-                                 text = paste(
-                                   "Date:", date,
-                                   "<br>Name:", type,
-                                   "<br>Vaccine efficacy:", round(E, 2)
-                                 ),customdata = type))+
-        geom_point(position = position_dodge(width = .9),alpha=0.7,size=3)+
-        geom_hline(yintercept=0.53, linetype="dashed", 
-                   color = "red")+
-        scale_colour_manual(values = c("grey","red"))+
-        scale_x_date(
-          date_breaks = "3 month",
-          date_labels = "%Y-%m"
-        )+
-        labs(color="",shape="")+
-        ylab("Vaccine efficacy ((u - v)/u)")+
-        xlab("Date (Year-month)")+
-        theme_minimal()+
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-              plot.title = element_text(hjust = 0.5))
-      
-      ggplotly(p, tooltip = "text",source = "A") |>
-        layout(
-          legend = list(
-            orientation = "v",   # vertical legend
-            x = 0.05,            # distance from left (0 = far left, 1 = far right)
-            y = 0.05,            # distance from bottom (0 = bottom, 1 = top)
-            xanchor = "left",
-            yanchor = "bottom",
-            bgcolor = "rgba(255,255,255,0.6)", # semi-transparent background
-            bordercolor = "black",
-            borderwidth = 1
-          )
+    demo_df <- fread("data/03_tmp/demo_antigenicty.tsv")
+    demo_df$group <- ifelse(demo_df$type == "Demo_sample","Demo samples","Circulating strains from GISAID database")
+    p <- demo_df |> ggplot(aes(date,E,
+                               color=group,shape=group,
+                               text = paste(
+                                 "Date:", date,
+                                 "<br>Name:", type,
+                                 "<br>Vaccine efficacy:", round(E, 2)
+                               ),customdata = type))+
+      geom_point(position = position_dodge(width = .9),alpha=0.7,size=3)+
+      geom_hline(yintercept=0.53, linetype="dashed", 
+                 color = "red")+
+      scale_colour_manual(values = c("grey","red"))+
+      scale_x_date(
+        date_breaks = "3 month",
+        date_labels = "%Y-%m"
+      )+
+      labs(color="",shape="")+
+      ylab("Vaccine efficacy ((u - v)/u)")+
+      xlab("Date (Year-month)")+
+      theme_minimal()+
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+            plot.title = element_text(hjust = 0.5))
+    
+    ggplotly(p, tooltip = "text",source = "A") |>
+      layout(
+        legend = list(
+          orientation = "v",   # vertical legend
+          x = 0.05,            # distance from left (0 = far left, 1 = far right)
+          y = 0.05,            # distance from bottom (0 = bottom, 1 = top)
+          xanchor = "left",
+          yanchor = "bottom",
+          bgcolor = "rgba(255,255,255,0.6)", # semi-transparent background
+          bordercolor = "black",
+          borderwidth = 1
         )
-
+      )
+    
   })
   
   
@@ -1161,13 +1209,13 @@ server <- function(input, output) {
   output$mol <- renderR3dmol({
     
     epitope <- clicked_epitope()
-  
+    
     # Read your legacy-format PDB file
     pdb_file <- file.path("data/03_tmp/",paste0(input$protein_file,".pdb"))
     pdb <- bio3d::read.pdb(pdb_file)
     pdb_trim <- trim.pdb(pdb, chain = c("A","B","C","D","E","F"))
     pdb_text <- paste(capture.output(write.pdb(pdb_trim)), collapse = "\n")  
-  
+    
     pdb_lines <- pdb_trim$atom
     pdb_text <- paste0(
       apply(pdb_lines, 1, function(row) {
@@ -1205,7 +1253,7 @@ server <- function(input, output) {
                               fontColor = "white",showBackground = T,
                               alignment = "bottomRight")
       )
-      
+    
   })
   
   output$protein_analysis_user <- renderUI({
@@ -1247,7 +1295,7 @@ server <- function(input, output) {
       }
       vax_label <- if (identical(input$vaxtype, "1")) input$vax_fastafiles$name else input$vaccine_strain
       demo_report_user_raw <- paste0("Vaccine efficacy of ",clicked_strain_user(),
-                  " compared with ", vax_label," strain is reduced by ",result," percent
+                                     " compared with ", vax_label," strain is reduced by ",result," percent
            \nNote: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score,".\n\nAmino Acid Differences/Mismatches: ",mismatches(), ".\n\nSorted Amino Acid Differences/Mismatches by Epitope:\n",mismatch_loc())
       demo_report_user_text <- paste(sapply(strsplit(demo_report_user_raw, "\n")[[1]], function(line) stringr::str_wrap(line, width=80)), collapse="\n")
       text_page <- magick::image_blank(width = 800, height = 1200, color = "white")
@@ -1297,7 +1345,7 @@ server <- function(input, output) {
       magick::image_write(all_pages, path = file, format = "pdf")
     },
     contentType = "application/pdf"
-    )
+  )
   
 }
 
