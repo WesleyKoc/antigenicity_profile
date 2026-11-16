@@ -22,3 +22,24 @@ VIC_idx <- list("A"=c(122,126,130:140,145:150),
                 "C"=c(40,280:300),
                 "D"=c(233,245:255),
                 "E"=c(62:63,73,75:82,85:100))
+
+
+if (current_subtype() == "H1N1") {
+  A<-c(128:129,158:167)#Technically Sa; Or 141:143,171:180
+  B<-c(170:173,202:212)#Technically Sb; Or 170:173,202:212
+  C<-c(169:173,206:208)#Technically Ca1; 
+  D<-c(140:145,224:225)#Technically Ca2; Or 151:159,238
+  E<-c(78:83)#Technically Cb
+} else if (current_subtype()  == "H3N2") {
+  A<-c(122:146)#critical cluster-transition positions 135, 144, 145
+  B<-c(155:163,186:197)#immunodominant residues 156, 158, 159, 189, 193
+  C<-c(45:54,275:278)
+  D<-c(201:228)
+  E<-c(62:83)
+} else {
+  A<-c(122,126,130:140,145:150)
+  B<-c(155:160,166,209,186:199)
+  C<-c(40,280:300)
+  D<-c(233,245:255)
+  E<-c(62:63,73,75:82,85:100)
+}
