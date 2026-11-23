@@ -1,8 +1,4 @@
 #TODO
-#Change the molecular model interface so that it gives user the option to have:
-#  1.	All grey
-#  2.	All epitopes highlighted
-#  3.	Toggle epitope highlighting based on interactive epitope plot selection
 
 #Epitope locations weird
 #Why is it so disconnected? Instead of having linear ranges they are split along very short lengths?
@@ -12,8 +8,6 @@
 #Look through the numbers provided by Yeen, need to dig into this
 #Theoretically, if there’s a mutation outside of the contacting end, unless the mutation messes up the contacting end by severe structural disruption, antigenicity should have little issue
 #Unless we have real data on which specific amino acids are directly involved in contacting the antigen/antibody, we don’t have any way to automate on the molecular display if the mismatch is on a contacting surface or the structure
-
-#Nextflow can be taken slowly, not many bits can be taken out
 
 #VIC = Influenza B Victoria Lineage
 #VIC antigenicity equation derivation paper: 10.1038/s41598-020-80895-w
@@ -70,16 +64,9 @@ ui <- fluidPage(
                                     #div(style = "font-size: 17px;",style = "text-align: center;",textOutput("num_epitope")),
                                     selectInput(inputId = "protein_file",
                                                 label = "Choose Protein Model to Visualise Hemagglutinin Mutations On:",
-                                                list("2009 H1N1 influenza virus" = "3LZG",
-                                                     "H3N2 A/Hong Kong/1/1968 influenza virus hemagglutinin" = "6CEX",
-                                                     "H5N1 influenza virus" = "2FK0",
-                                                     "H5N1 A/goose/Guangdong/1/96" = "4MHI",
-                                                     "H5N1 hemagglutinin mutant (N158D, N224K and Q226L) A/Viet Nam/1203/2004"="4N5Y",
-                                                     "H10N8 A/Jiangxi-Donghu/346/2013"="4WSX",
-                                                     "H17N10 A/little yellow-shouldered bat/Guatemala/060/2010"="4H32",
-                                                     "H1N1 A/South Carolina/1/1918"="4JUG",
-                                                     "H5N1 A/duck/Laos/3295/2006(H5N1)"="4JUL",
-                                                     "H7N9 A/Hong Kong/61/2016"="6D7C"),
+                                                list("H1N1" = "3LZG",
+                                                     "H3N2" = "6CEX",
+                                                     "Influenza B" = "3BT6"),
                                                 width = 999),
                                     r3dmolOutput("mol", height = "500px"),
                                     br(),
@@ -133,7 +120,7 @@ ui <- fluidPage(
                                               label = "Vaccine Type", 
                                               choices = list( 
                                                 "H1N1" = "H1N1", 
-                                                "VIC" = "VIC",
+                                                "Influenza B" = "VIC",
                                                 "H3N2" = "H3N2"
                                               ),
                                             )
@@ -142,7 +129,7 @@ ui <- fluidPage(
                                             fileInput("vax_fastafiles", "Upload FASTA File", multiple = FALSE,
                                                       accept = c(".fasta",".fasta.gz", ".fa",".fa.gz")),
                                             radioButtons(inputId = "uploaded_subtype", label="What's your sample's subtype?",
-                                                         choices = list("H1N1" = "H1N1", "VIC"="VIC", "H3N2"="H3N2")))
+                                                         choices = list("H1N1" = "H1N1", "Influenza B"="VIC", "H3N2"="H3N2")))
                          ),
                          column(
                            width = 5,
@@ -295,7 +282,7 @@ ui <- fluidPage(
                          brrep(4),
                          tags$h4("Antigenicity Plot"),
                          tags$p("This plot shows the predicted efficacy of your selected vaccine against your selected virus strain given by the HA gene sequence."),
-                         tags$img(src="app_images/antigenicityplotuser.png", width="100%", height="100%"),
+                         tags$img(src="app_images/antigenicityplotuser1.png", width="100%", height="100%"),
                          tags$p("Above the plot, the summary of how well your selected vaccine strain performs against your selected virus strain is indicated in percentage change."),
                          tags$p("In the plot, the red dotted line indicates the theoretically ideal level of performance your vaccine should perform at while each virus strain stored in the database is distributed across the X-axis by the collection date and season, and each virus' performance is indicated by the Y-axis."),
                          tags$p("The level of your red triangle indicates how well your selected vaccine was predicted to perform it against other viral strains across the years, so don't feel too disappointed if it's underperforming a bit in the model, most vaccines do anyway."),
@@ -1016,23 +1003,23 @@ server <- function(input, output) {
     )
     
     if (current_subtype() == "H1N1") {
-      A <- c(118,120,121,122,126,127,128,129,132,133,134,135,137,139,140,141,142,143,146,147,149,165,252,253) #Epitope Site A
-      B <- c(124,125,152,153,154,155,156,157,160,162,183,184,185,186,187,189,190,191,193,194,195,196) #Epitope Site B
-      C <- c(34,35,36,37,38,40,41,43,44,45,269,270,271,272,273,274,276,277,278,283,288,292,295,297,298,302,303,305,306,307,308,309,310) #Epitope Site C
-      D <- c(89,94,95,96,113,117,163,164,166,167,168,169,170,171,172,173,174,176,179,198,200,202,204,205,206,207,208,209,210,211,212,213,214,215,216,222,223,224,225,226,227,235,237,239,241,243,244,245) #Epitope Site C
-      E <- c(47,48,50,51,53,54,56,57,58,66,68,69,70,71,72,73,74,75,78,79,80,82,83,84,85,86,102,257,258,259,260,261,263,267) #Epitope Site E
+      A <- c(128:129,158:167) #Epitope Site A
+      B <- c(170:173,202:212) #Epitope Site B
+      C <- c(169:173,206:208) #Epitope Site C
+      D <- c(140:145,224:225) #Epitope Site C
+      E <- c(78:83) #Epitope Site E
     } else if (current_subtype()  == "H3N2") {
-      A <- c(122,128,44,96,57,124,129,45,102,59,126,155,46,103,62,130,156,47,117,63,131,157,48,121,67)
-      B <- c(132,158,50,167,75,133,159,51,170,78,135,160,53,171,80,137,163,54,172,81,138,165,273,173,82)
-      C <- c(140,186,275,174,83,142,187,276,175,86,143,188,278,176,87,144,189,279,177,88,145,190,280,179,91)
-      D <- c(146,192,294,182,92,150,193,297,201,94,152,194,299,203,109,168,196,300,207,260,197,304,208,261)
-      E <- c(198,305,209,262,307,212,265,308,213,309,214,310,215,311,216,312,217,218,219,226,227,228,229,230,238,240,242,244,246,247,248)
+      A <- c(122:146)
+      B <- c(155:163,186:197)
+      C <- c(45:54,275:278)
+      D <- c(201:228)
+      E <- c(62:83)
     } else {
-      A <- c(121,122,123,125,126,134,135,136,137,139,141,142,144,146,147,148,149,150,151,155,157,177)
-      B <- c(127,129,133,160,161,162,163,164,165,166,168,172,174,196,197,198,199,200,202,203,204,206,207,208,209)
-      C <- c(34,35,36,37,38,39,40,289,291,292,293,294,309,315,317,318,320,321,323,324,325,326,327)
-      D <- c(93,101,102,116,120,176,179,180,182,183,184,185,186,187,188,190,212,214,218,219,220,223,224,225,226,227,228,229,230,233,242,243,244,245,246,254,255,256,257,258)
-      E <- c(42,44,48,56,58,59,63,71,73,75,77,78,79,80,83,84,85,88,89,91,108,273,276,277,280)
+      A<-c(122,126,130:140,145:150)
+      B<-c(155:160,166,209,186:199)
+      C<-c(40,280:300)
+      D<-c(233,245:255)
+      E<-c(62:63,73,75:82,85:100)
     }
     
     viewer <- r3dmol() %>%
@@ -1276,16 +1263,9 @@ server <- function(input, output) {
     
     selectInput(inputId = "protein_file",
                 label = "Choose Protein Model to Visualise Mutations On:",
-                list("2009 H1N1 influenza virus" = "3LZG",
-                     "H3N2 A/Hong Kong/1/1968 influenza virus hemagglutinin" = "6CEX",
-                     "H5N1 influenza virus" = "2FK0",
-                     "H5N1 A/goose/Guangdong/1/96" = "4MHI",
-                     "H5N1 hemagglutinin mutant (N158D, N224K and Q226L) A/Viet Nam/1203/2004"="4N5Y",
-                     "H10N8 A/Jiangxi-Donghu/346/2013"="4WSX",
-                     "H17N10 A/little yellow-shouldered bat/Guatemala/060/2010"="4H32",
-                     "H1N1 A/South Carolina/1/1918"="4JUG",
-                     "H5N1 A/duck/Laos/3295/2006(H5N1)"="4JUL",
-                     "H7N9 A/Hong Kong/61/2016"="6D7C"),
+                list("H1N1" = "3LZG",
+                     "H3N2" = "6CEX",
+                     "Influenza B" = "3BT6"),
                 width = 999)
   })
   

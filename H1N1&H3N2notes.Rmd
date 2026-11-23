@@ -3,28 +3,43 @@ title: "H1N1&H3N2notes"
 output: html_document
 ---
 
-#H1N1 Site Contents Vary by Strain and Study
-The five H1 sites are Sa, Sb, Ca1, Ca2, and Cb, and their residue counts differ between the classical PR8 map and pandemic strains.
+#The epitope positions identified per influenza subtype
+The positions were identified by 3 papers, all of which inherited the definitions and did not derive them de novo.
+H1N1 regions are a ClustalW mapping of H3 onto H1 plus entropy refinement
+Influenza B regions are an H3 mapping plus entropy and surface-accessibility additions
+If you want to take a look further, the VIC list matches the Yamagata-model table
+
+##H1N1 Site Contents Vary by Strain and Study (Deem & Pan, 2009)
+The five H1 sites are Sa, Sb, Ca1, Ca2, and Cb.
+These epitopes were mapped out by aligning A/PR/8/1934 (H1) to A/Aichi/2/1968 (H3) using ClustalW.
+Structural verification superimposed the PDB model 1HGF (H3) against 1RU7 (H1), with alpha-carbon RMSDs (root mean square deviations) across the five epitopes set at 2.18, 0.63, 1.19, 2.43 and 1.90 Å.
+Early antibody mapping on PR/8 assigned 9, 6, 6, 5 and 6 residues to Sa, Sb, Ca1, Ca2 and Cb, which map by homology to H3 epitopes B+D, B, C+D, A+D and E respectively
+The remaining 31 sites were added by information entropy. They were added under selective immune pressure on the protein surface, with entropy >0.075, computed from 2,294 full-length human H1 sequences
+However, external studies show that the residue counts per epitope differ between the classical PR8 map and pandemic strains.
 For instance in a comparison study between 2009 pandemic and eurasian avian-like strains, the sites were of sizes 13, 12, 11, 8, and 5 residues respectively.
 Site differences between the two strains were at 4 (Sa), 6 (Sb), 6 (Ca1), 4 (Ca2), and 2 (Cb).
 A single H128N substitution in Sa was sufficient to cause a four-fold HI change and measurable antigenic drift
 
-Some papers don't uniformly cover all sites
-Eg. Pandemic H1N1 paper escape-mutant sequencing covered only Sa, Sb, Ca2, and added a new site called Pa
-Assignments:
-Sa: 141, 142, 143, 171, 172, 174, 177, 180
-Sb: 170, 173, 202, 206, 210, 211, 212
-Ca2: 51, 154, 156, 157, 158, 159, 200, 238
-Pa: 147
+
+##H3N2 sites (Gupta et al., 2006)
+This was the reference strain from which H1 and VIC epitope positions were derived from. 
+Strain sequences and the five H3N2 epitope definitions were taken directly from one reference. The dominant epitope was selected as the one with the largest amino-acid change relative to the vaccine strain.
+The antigenic distance match measure was calibrated so a perfect matches results in a 47% efficacy
+The three papers from which these residues were defined took those residues from external references, specifically identified via crystallography and improved with sequence analysis.
+This contrasted with papers that defined epitopes and assembled positional data using monoclonal antibody competition and escape mutant selection instead of a fixed residue roster.
+Only epitope regions, and not the entire protein, are significantly involved in immune recognition, so any changes elsewhere track poorly with efficacy
 
 
-#H3N2 sites
-These were assembled using monoclonal antibody competition and escape mutant selection instead of a fixed residue roster
+##VIC sites (Pan & Deem, 2016)
+Epitopes were mapped to the five H3 regions using PRANK MSA (https://ariloytynoja.github.io/prank-msa/).
+PRANK allows for gaps and accounts for evolutionary distances. 
+A/California/7/2004 was used as reference and for numbering just like in the H1N1 epitope assembly, any epitope site that aligned with a gap in H1N1 was deleted.
+High-entropy sites from human B sequences were then added.
 
-#Why Yean's numbers are strange
-The papers used don't report the same thing.
-Gupta et al. and Pan & Deem defined these epitope regions for general use. This was specially used for computing antigenic distance.
-These regions were deliberately enlarged and mapped onto a model strain.
+
+##Why the epitope ranges in config.R seem strange
+The papers used did not report using the same method
+Gupta et al. and Pan & Deem defined these epitope regions for general use. This was specially used for computing antigenic distance. These regions were deliberately enlarged and mapped onto a model strain, such that they represent binding across a whole repertoire and population instead of a single antibody-antigen contact.
 Conversely the classical A-E ranges were structures defined on the H3 model.
-We guessed right: the discontinuity was due to those sites being clusters of surface-exposed residues, exposed by the protein folding.
+We guessed right: the discontinuity was due to those sites being clusters of surface-exposed residues brought together by protein folding, instead of a contiguous peptide.
 Overall the fraction of substitutions in the epitope dominating the mutations calculate well for antigenic distance and vaccine efficacy estimations; correlation weakens when the whole hemagglutinin is used
