@@ -1,13 +1,16 @@
 #TODO
+#PRIORITY: clarify what vaccine efficacy actually means + the R^2 of the equations used
+#Allow users to input multiple virus with only 1 vaccine at once
+#Error messages
+#Add southern hemisphere vaccine and circulating viruses sorted by year to be option for selection
+##Have 1 minimisable menu showing different dropdown menus showing each year --> each dropdown menu will reveal all the recommended vaccines by WHO for that year --> select whichever vaccine you want from them, but only 1
+##Have 1 minimisable menu showing different dropdown menus showing each year --> each dropdown menu will reveal all the noted circulating viruses by WHO for that year --> select whichever vaccine you want from them via checkbox
+###Next to each dropdown menu showing each year, there's a checkbox that allows users to select by the whole year instead of by the specific strain
+#Change font sizes of the buttons and text output, needs to be bigger
+#Change app name
 
-#Epitope locations weird
-#Why is it so disconnected? Instead of having linear ranges they are split along very short lengths?
-#Why are the epitopes so massive? --> to fix this, set the m_sel in highmode == "2" to also contain the chain="A" argument before resi="" argument
-#Why does the same epitope range appear on parts of the model that aren’t on the contacting end of the protein?
-#Probably the protein worked like a dimer: prior to host interaction, perhaps like Dengue, HA units interacted together so they can form the entire viral molecule? In case of epitope A, the current ranges set them on opposite ends of the “dumbbell-like” structure, perhaps these are the surfaces for dimer interactions?
-#Look through the numbers provided by Yeen, need to dig into this
-#Theoretically, if there’s a mutation outside of the contacting end, unless the mutation messes up the contacting end by severe structural disruption, antigenicity should have little issue
-#Unless we have real data on which specific amino acids are directly involved in contacting the antigen/antibody, we don’t have any way to automate on the molecular display if the mismatch is on a contacting surface or the structure
+#TODO Done --> pending review:
+#Fix H1N1 epitope classification
 
 #VIC = Influenza B Victoria Lineage
 #VIC antigenicity equation derivation paper: 10.1038/s41598-020-80895-w
@@ -27,19 +30,19 @@ brrep <- function(pixels = 20) {
 
 # Define UI ----
 ui <- fluidPage(
-  theme = bs_theme(version = 5, bootswatch = "morph"),
+  theme = bs_theme(version = 5, bootswatch = "brite") |>
+    bs_add_rules(".nav-pills {gap:.5rem}.nav-pills > li {flex:1}.nav-pills .nav-link {text-align: center; font-size: clamp(1rem, 1.4vw, 1.4rem); border: 2px solid var(--bs-border-color); box-shadow: 3px 3px 0 var(--bs-border-color)}.nav-pills .nav-link.active {background-color: var(--bs-primary);color: var(--bs-dark)}"),
   
   titlePanel(
-    div(p("FluWatch ☢️ \n", tags$em('@TropMed')),
+    div(p("<name_pending> \n", tags$em('@TropMed')),
         tags$style(HTML("body{margin-top: 50px;}")),
         style = "min-height: 120px; display: flex; justify-content: center;
       align-items: center; width: 100%; font-family: 'Times New Roman'; font-size: 3.5vw")),
   
   # Main panel content first
-  tabsetPanel(type = "tabs",
+  tabsetPanel(type = "pills",
               tabPanel("Demo",
                        tags$style(HTML("body {margin-right: 150px;margin-left: 150px;margin-bottom: 150px;}")),
-                       br(),
                        fluidRow(tags$p("Welcome to FluWatch! A tool for testing if your influenza virus strain works with current vaccine strains in circulation!"),
                                 tags$a(href="https://www.youtube.com/watch?v=9XDaVNsC_4g", "Click here for a youtube demo of the app!")),
                        fluidRow(
@@ -47,7 +50,7 @@ ui <- fluidPage(
                            width = 12,
                            br(),
                            div(id="demo_report_section",
-                               div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;", textOutput("demo_report")),
+                               div(class="card bg-primary mb-3", style = "font-size:17px; text-align:center; border:2px solid; padding:15px; border-radius:10px; width:100%; margin:0 auto; box-shadow: 4px 4px 0 #000;", textOutput("demo_report")),
                            )
                          )
                        ),
@@ -78,13 +81,42 @@ ui <- fluidPage(
                        br(),
                        fluidRow(column(width = 12,dataTableOutput("segment_summary")))),
               tabPanel("User's analysis",
-                       tags$style(HTML("body {margin-right: 150px;margin-left: 150px;}.radio label {white-space: nowrap;}")),
+                       tags$style(HTML("body {margin-right: 150px;margin-left: 150px;}.radio label, .radio-inline {white-space: nowrap; font-size: 17px;}.control-label {font-size: 18px; font-weight: 600;}.btn, .btn-file, .form-control, .selectize-input, .selectize-dropdown {font-size: 17px;}")),
+                       fluidRow(
+                         column(
+                           width = 12,
+                           div(class="alert alert-dismissible alert-warning", style = "font-size:17px; border:2px solid; padding:15px; border-radius:10px; width:100%; margin:0 auto; box-shadow: 4px 4px 0 #000;",
+                               tags$button(type="button", class="btn-close", `data-bs-dismiss`="alert"),
+                               tags$h1("TO SET YOUR EXPECTATIONS"),
+                               tags$br(),
+                               "This app was not designed for absolute values in vaccine efficacy. The linear models powering the app each have the following R",tags$sup("2")," values per subtype:",
+                               tags$br(),
+                               "- Influenza B: 0.61",
+                               tags$br(),
+                               "- H1N1: 0.68",
+                               tags$br(),
+                               "- H3N2: 0.83",
+                               brrep(30),
+                               "This app was designed to give you quick and intuitively interpretable answers, to compare the relative predicted efficacy of your vaccine against various viruses to your desire",
+                               brrep(30),
+                               "When the sequence match at the most divergent epitope drops below 0.442, the predicted vaccine efficacy drops below 0"))),
+                       br(),
+                       fluidRow(
+                         column(
+                           width = 12,
+                           div(class="card bg-primary mb-3", style = "font-size:17px; text-align:center; border:2px solid; background-color; padding:15px; border-radius:10px; width:100%; margin:0 auto; box-shadow: 4px 4px 0 #000;",
+                               tags$h2("Simple terms explanation of \"Vaccine Efficacy\""),
+                               tags$br(),
+                               "It represents the relative reduction in infection rate between two groups",
+                               brrep(30),
+                               "Por Ejemplo: Given a population of 200 people, if 100 people get the vaccine and 100 similar people don't, and 20 of the unvaccinated get sick but only 10 of the vaccinated do, the efficacy is 50%"))
+                       ),
                        br(),
                        fluidRow(
                          column(
                            width = 5,
                            br(),
-                           radioButtons( inputId = "radio", label = "Analysis Type", 
+                           radioButtons(inputId = "radio", label = "Analysis Type", 
                                          choices = list( "Genome Assembly with Antigenicity Prediction" = 1, "Antigenicity Prediction Only" = 2),
                            )
                          ),
@@ -149,9 +181,9 @@ ui <- fluidPage(
                        fluidRow(
                          column(
                            width = 12,
-                           div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; 
-                               background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; 
-                               margin:0 auto;", uiOutput("demo_report_user")),
+                           div(class="card bg-primary mb-3", style = "font-size:17px; text-align:center; 
+                               padding:15px; border-radius:10px; width:100%; 
+                               margin:0 auto; box-shadow: 4px 4px 0 #000;", uiOutput("demo_report_user")),
                            br(),
                            div(
                              style = "width: 100%; margin: 0 auto;",
@@ -164,8 +196,9 @@ ui <- fluidPage(
                          column(
                            width=12,
                            h4("Amino Acid Differences/Mismatches"),
-                           textOutput("mismatches"),
-                           verbatimTextOutput("mismatches_sorted")
+                           tags$div(style="font-size: 17px;", textOutput("mismatches")),
+                           h4("Sorted:"),
+                           tags$div(style="white-space: pre-line; font-size: 17px;",textOutput("mismatches_sorted"))
                          )
                        ),
                        br(),
@@ -178,7 +211,7 @@ ui <- fluidPage(
                        fluidRow(
                          column(
                            width = 12,
-                           div(style = "font-size:17px; text-align:center; border:2px solid #A9A9A9; background-color:#F5F5F5; padding:15px; border-radius:10px; width:100%; margin:0 auto;",
+                           div(class="card bg-primary mb-3", style = "font-size:17px; text-align:center; border:2px solid; background-color; padding:15px; border-radius:10px; width:100%; margin:0 auto; box-shadow: 4px 4px 0 #000;",
                                "Orange = epitope site A | Yellow = epitope site B | Green = epitope site C",
                                tags$br(),
                                "Blue = epitope site D | Purple = epitope site E"))
@@ -402,7 +435,7 @@ ui <- fluidPage(
                        )),
                        br(),
                        fluidRow(
-                         
+                         tags$h1("TBD")
                        )
               )
   )
@@ -735,7 +768,8 @@ server <- function(input, output) {
     vax_label <- if (identical(input$vaxtype, "1")) input$vax_fastafiles$name else input$vaccine_strain
     HTML(paste0("Vaccine efficacy of ",clicked_strain_user(),
                 " compared with ", vax_label," strain is reduced by ",result," percent
-           <br>Note: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score))
+                <br><br>Note: don't be alarmed by the low percentage, the maximum efficacy ie. a perfect match is ", max_score,
+                "<br><br>Tip: if your red triangle is higher than the grey dots (circulating strains) at the same time period, that means your selected vaccine would have worked better if your inputted virus was circulating at the time"))
   })
   
   
@@ -762,7 +796,7 @@ server <- function(input, output) {
         date_labels = "%Y-%m"
       )+
       labs(color="",shape="")+
-      ylab("Vaccine efficacy ((u - v)/u)")+
+      ylab("Vaccine efficacy (%)")+
       xlab("Date (Year-month)")+
       theme_minimal()+
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
@@ -908,19 +942,23 @@ server <- function(input, output) {
     paste0(vaccine[vaccine != user_input], vax_pos[vaccine != user_input], user_input[vaccine != user_input], collapse = ", ")
   })
   
+  output$mismatches <- renderText({
+    mismatches()
+  })
+  
   mismatch_loc <- reactive ({
     if (current_subtype() == "H1N1") {
-      A <- c(118,120,121,122,126,127,128,129,132,133,134,135,137,139,140,141,142,143,146,147,149,165,252,253) #Epitope Site A
-      B <- c(124,125,152,153,154,155,156,157,160,162,183,184,185,186,187,189,190,191,193,194,195,196) #Epitope Site B
-      C <- c(34,35,36,37,38,40,41,43,44,45,269,270,271,272,273,274,276,277,278,283,288,292,295,297,298,302,303,305,306,307,308,309,310) #Epitope Site C
-      D <- c(89,94,95,96,113,117,163,164,166,167,168,169,170,171,172,173,174,176,179,198,200,202,204,205,206,207,208,209,210,211,212,213,214,215,216,222,223,224,225,226,227,235,237,239,241,243,244,245) #Epitope Site C
-      E <- c(47,48,50,51,53,54,56,57,58,66,68,69,70,71,72,73,74,75,78,79,80,82,83,84,85,86,102,257,258,259,260,261,263,267) #Epitope Site E
+      A<-c(141,142,143,162,163,171,172,173,174,177,180)#Technically Sa; Or 141:143,171:180
+      B<-c(170,173,185,186,190,202,206,210,211,212)#Technically Sb; Or 170:173,202:212
+      C<-c(186,187,188,189,190,220,222,223,224,225,237,252,253,255,256,257)#Technically Ca1; shifted by +17 in accordance to Meng et al from c(169, 170, 171, 172, 173,203,205,206,207,208,220,235,236,238,239,240)
+      D<-c(137,138,141,151,154,156,157,158,159,200,222,238)#Technically Ca2; Or 151:159,238
+      E<-c(90:94)#Technically Cb; shifted from 73:77 in accordance to Meng et al by +17
     } else if (current_subtype()  == "H3N2") {
-      A <- c(122,128,44,96,57,124,129,45,102,59,126,155,46,103,62,130,156,47,117,63,131,157,48,121,67)
-      B <- c(132,158,50,167,75,133,159,51,170,78,135,160,53,171,80,137,163,54,172,81,138,165,273,173,82)
-      C <- c(140,186,275,174,83,142,187,276,175,86,143,188,278,176,87,144,189,279,177,88,145,190,280,179,91)
-      D <- c(146,192,294,182,92,150,193,297,201,94,152,194,299,203,109,168,196,300,207,260,197,304,208,261)
-      E <- c(198,305,209,262,307,212,265,308,213,309,214,310,215,311,216,312,217,218,219,226,227,228,229,230,238,240,242,244,246,247,248)
+      A <- c(122,128,44,96,57,124,129,45,102,59,126,155,46,103,62,130,156,47,117,63,131,157,48,121,67)#Epitope A
+      B <- c(132,158,50,167,75,133,159,51,170,78,135,160,53,171,80,137,163,54,172,81,138,165,273,173,82)#Epitope B
+      C <- c(140,186,275,174,83,142,187,276,175,86,143,188,278,176,87,144,189,279,177,88,145,190,280,179,91)#Epitope C
+      D <- c(146,192,294,182,92,150,193,297,201,94,152,194,299,203,109,168,196,300,207,260,197,304,208,261)#Epitope D
+      E <- c(198,305,209,262,307,212,265,308,213,309,214,310,215,311,216,312,217,218,219,226,227,228,229,230,238,240,242,244,246,247,248)#Epitope E
     } else {
       A <- c(121,122,123,125,126,134,135,136,137,139,141,142,144,146,147,148,149,150,151,155,157,177)
       B <- c(127,129,133,160,161,162,163,164,165,166,168,172,174,196,197,198,199,200,202,203,204,206,207,208,209)
@@ -955,9 +993,6 @@ server <- function(input, output) {
     paste(mutations_list, collapse = "\n")
   })
   
-  output$mismatches <- renderText({
-    mismatches()
-  })
   
   output$mismatches_sorted <- renderText({
     mismatch_loc()
@@ -1003,11 +1038,11 @@ server <- function(input, output) {
     )
     
     if (current_subtype() == "H1N1") {
-      A <- c(128:129,158:167) #Epitope Site A
-      B <- c(170:173,202:212) #Epitope Site B
-      C <- c(169:173,206:208) #Epitope Site C
-      D <- c(140:145,224:225) #Epitope Site C
-      E <- c(78:83) #Epitope Site E
+      A<-c(141,142,143,162,163,171,172,173,174,177,180)#Epitope Site A
+      B<-c(170,173,185,186,190,202,206,210,211,212)#Epitope Site B
+      C<-c(186,187,188,189,190,220,222,223,224,225,237,252,253,255,256,257)#Epitope Site C
+      D<-c(137,138,141,151,154,156,157,158,159,200,222,238)#Epitope Site D
+      E<-c(90:94)#Epitope Site E
     } else if (current_subtype()  == "H3N2") {
       A <- c(122:146)
       B <- c(155:163,186:197)
