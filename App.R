@@ -178,6 +178,7 @@ ui <- fluidPage(
                          )
                        ),
                        br(),
+                       br(),
                        fluidRow(
                          column(
                            width = 12,
@@ -197,8 +198,9 @@ ui <- fluidPage(
                            width=12,
                            h4("Amino Acid Differences/Mismatches"),
                            tags$div(style="font-size: 17px;", textOutput("mismatches")),
+                           brrep(40),
                            h4("Sorted:"),
-                           tags$div(style="white-space: pre-line; font-size: 17px;",textOutput("mismatches_sorted"))
+                           tags$div(style="font-size: 17px;",textOutput("mismatches_sorted"))
                          )
                        ),
                        br(),
@@ -257,14 +259,7 @@ ui <- fluidPage(
               ),
               tabPanel("Help (Eng)",
                        tags$style(HTML(
-                         "body {
-                           margin-right: 150px;
-                           margin-left: 150px;
-                         }
-                         .radio label {
-                         white-space: nowrap;
-                         }"
-                       )),
+                         ".tab-content {font-size:17px !important;} body {margin-right: 150px;margin-left: 150px;}.radio label {white-space: nowrap;}.fon")),
                        br(),
                        fluidRow(
                          tags$h1("Welcome to FluWatch, the influenza vaccine antigenicity detector!"),
@@ -554,14 +549,17 @@ server <- function(input, output) {
       "H3N2" = "data/02_vaccine_strain/H3N2.fasta"
     )
     
-    headers <- get_fasta_headers(path)
+    vax_headers <- get_fasta_headers(path)
+    headers <- vax_headers$headers
+    years <- vax_headers$years
     
     selectInput(
       inputId = "vaccine_strain",
       label = "Vaccine Strain to Compare",
-      choices = headers,
+      choices = setNames(headers, years),
       width = "100%"
     )
+    
   })
   
   

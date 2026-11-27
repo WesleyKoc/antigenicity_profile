@@ -14,7 +14,19 @@ get_fasta_headers <- function(path) {
   lines <- readLines(path, warn = FALSE)
   headers <- lines[startsWith(lines,">")]
   setNames(headers, headers)
+  years <- rep(NA_character_, length(headers))
+  for (i in 1:length(headers)) {
+    splitheader <- unlist(str_split(headers[i], "/"))
+    if (length(splitheader) >= 4){
+      years[i] <- as.integer(substr(splitheader[4], 1, 4))
+    } else {
+      years[i] <- NA_character_
+    }
+  }
+  names(years)<- headers
+  return(list(headers=headers, years=years))
 }
+
 
 translate_AA <- function(X){
   
