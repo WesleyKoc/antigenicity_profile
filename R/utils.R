@@ -17,8 +17,8 @@ get_fasta_headers <- function(path) {
   years <- rep(NA_character_, length(headers))
   for (i in 1:length(headers)) {
     splitheader <- unlist(str_split(headers[i], "/"))
-    if (length(splitheader) >= 4){
-      years[i] <- as.integer(substr(splitheader[4], 1, 4))
+    if (length(splitheader) >= 5){
+      years[i] <- paste0(unlist(str_split(splitheader[5], "\\)"))[1], ")")
     } else {
       years[i] <- NA_character_
     }

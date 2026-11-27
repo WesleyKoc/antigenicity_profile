@@ -153,7 +153,10 @@ ui <- fluidPage(
                                               choices = list( 
                                                 "H1N1" = "H1N1", 
                                                 "Influenza B" = "VIC",
-                                                "H3N2" = "H3N2"
+                                                "H3N2" = "H3N2",
+                                                "WHO H1N1 references" = "H1N1_ref",
+                                                "WHO H3N2 references" = "H3N2_ref",
+                                                "WHO Influenza B references" = "VIC_ref"
                                               ),
                                             )
                            ),
@@ -546,19 +549,21 @@ server <- function(input, output) {
       current_subtype(),
       "H1N1" = "data/02_vaccine_strain/H1N1.fasta",
       "VIC" = "data/02_vaccine_strain/VIC.fasta",
-      "H3N2" = "data/02_vaccine_strain/H3N2.fasta"
+      "H3N2" = "data/02_vaccine_strain/H3N2.fasta",
+      "H1N1_ref" = "data/02_vaccine_strain/H1N1_ref.fasta",
+      "H3N2_ref" = "data/02_vaccine_strain/H3N2_ref.fasta",
+      "VIC_ref" = "data/02_vaccine_strain/VIC_ref.fasta"
     )
     
     vax_headers <- get_fasta_headers(path)
     headers <- vax_headers$headers
     years <- vax_headers$years
-    
     selectInput(
       inputId = "vaccine_strain",
       label = "Vaccine Strain to Compare",
-      choices = setNames(headers, years),
-      width = "100%"
-    )
+      choices = 
+        if (grepl("ref", path, fixed=TRUE)) {setNames(headers, years)} else {headers},
+      width = "100%")
     
   })
   
